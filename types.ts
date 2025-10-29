@@ -5,6 +5,7 @@ export interface Transcript {
 
 export interface Assistant {
   id: string;
-  title: string;
+  title?: string; // For custom personas
+  titleKey?: string; // For preset personas
   prompt: string;
 }
