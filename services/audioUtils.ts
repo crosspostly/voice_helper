@@ -46,7 +46,10 @@ export function createBlob(data: Float32Array): Blob {
   const l = data.length;
   const int16 = new Int16Array(l);
   for (let i = 0; i < l; i++) {
-    int16[i] = data[i] < 0 ? data[i] * 32768 : data[i] * 32767;
+    // Clamp the value between -1 and 1 to prevent wraparound distortion
+    const s = Math.max(-1, Math.min(1, data[i]));
+    // Convert to 16-bit integer, using full range for better quality
+    int16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
   }
   return {
     data: encode(new Uint8Array(int16.buffer)),
