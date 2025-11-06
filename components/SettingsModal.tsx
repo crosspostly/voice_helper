@@ -19,6 +19,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, l
     const [isAdultMode, setIsAdultMode] = useState(() => localStorage.getItem('isAdultMode') === 'true');
     const [customApiKey, setCustomApiKey] = useState(() => localStorage.getItem('customApiKey') || '');
     const [showSaveOptions, setShowSaveOptions] = useState(false);
+    const [notification, setNotification] = useState<string>('');
+    const [isUsingCustomKey, setIsUsingCustomKey] = useState(() => !!localStorage.getItem('customApiKey'));
 
     useEffect(() => {
         localStorage.setItem('isAdultMode', String(isAdultMode));
@@ -28,9 +30,30 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, l
         localStorage.setItem('isDevMode', String(isDevMode));
     }, [isDevMode]);
 
-    useEffect(() => {
-        localStorage.setItem('customApiKey', customApiKey);
-    }, [customApiKey]);
+    const handleApiKeyChange = (value: string) => {
+        setCustomApiKey(value);
+        if (value.trim()) {
+            localStorage.setItem('customApiKey', value);
+            setIsUsingCustomKey(true);
+            showNotification(lang === 'ru' ? '✓ Свой API ключ активирован' : '✓ Custom API key activated');
+        } else {
+            localStorage.removeItem('customApiKey');
+            setIsUsingCustomKey(false);
+            showNotification(lang === 'ru' ? '✓ Использован ключ по умолчанию' : '✓ Using default API key');
+        }
+    };
+
+    const handleResetApiKey = () => {
+        setCustomApiKey('');
+        localStorage.removeItem('customApiKey');
+        setIsUsingCustomKey(false);
+        showNotification(lang === 'ru' ? '✓ Ключ сброшен на стандартный' : '✓ Reset to default API key');
+    };
+
+    const showNotification = (message: string) => {
+        setNotification(message);
+        setTimeout(() => setNotification(''), 3000);
+    };
     
     const handleExportSettings = () => {
         const settings = {
@@ -108,6 +131,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, l
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50" onClick={onClose}>
+            {notification && (
+                <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-[60] animate-fade-in">
+                    {notification}
+                </div>
+            )}
             <div className="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
                 <h2 className="text-xl font-bold mb-6 text-center">{t.advancedSettings}</h2>
                 <div className="space-y-4">
@@ -132,15 +160,35 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, l
                         </label>
                     </div>
                     <div className="p-3 bg-gray-700 rounded-lg">
-                        <label htmlFor="api-key-input" className="block font-medium text-white mb-1">{t.customApiKey}</label>
-                        <input
-                            id="api-key-input"
-                            type="password"
-                            value={customApiKey}
-                            onChange={(e) => setCustomApiKey(e.target.value)}
-                            placeholder={t.customApiKeyPlaceholder}
-                            className="w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-2 focus:ring-green-500 focus:outline-none"
-                        />
+                        <div className="flex items-center justify-between mb-2">
+                            <label htmlFor="api-key-input" className="block font-medium text-white">{t.customApiKey}</label>
+                            {isUsingCustomKey && (
+                                <span className="text-xs text-green-400 font-semibold">{lang === 'ru' ? '● Свой ключ' : '● Custom key'}</span>
+                            )}
+                            {!isUsingCustomKey && (
+                                <span className="text-xs text-gray-400">{lang === 'ru' ? '○ По умолчанию' : '○ Default'}</span>
+                            )}
+                        </div>
+                        <div className="flex space-x-2">
+                            <input
+                                id="api-key-input"
+                                type="password"
+                                value={customApiKey}
+                                onChange={(e) => setCustomApiKey(e.target.value)}
+                                onBlur={(e) => handleApiKeyChange(e.target.value)}
+                                placeholder={t.customApiKeyPlaceholder}
+                                className="flex-1 bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-2 focus:ring-green-500 focus:outline-none"
+                            />
+                            {isUsingCustomKey && (
+                                <button
+                                    onClick={handleResetApiKey}
+                                    className="bg-amber-600 hover:bg-amber-700 text-white px-3 py-2 rounded-md transition-colors text-sm font-semibold"
+                                    title={lang === 'ru' ? 'Сбросить' : 'Reset'}
+                                >
+                                    ↺
+                                </button>
+                            )}
+                        </div>
                         <p className="text-xs text-gray-400 mt-1">{t.customApiKeyDesc}</p>
                     </div>
                     <div className="p-3 bg-gray-700 rounded-lg">
