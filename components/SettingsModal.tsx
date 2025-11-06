@@ -6,6 +6,8 @@ interface SettingsModalProps {
     isOpen: boolean;
     onClose: () => void;
     lang: 'en' | 'ru';
+    isDevMode: boolean;
+    setIsDevMode: (value: boolean) => void;
     onSaveConversation: () => void;
     onSavePdf: () => void;
     onClearTranscript: () => void;
@@ -13,7 +15,7 @@ interface SettingsModalProps {
     t: Record<string, string>;
 }
 
-export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, lang, onSaveConversation, onSavePdf, onClearTranscript, copyButtonText, t }) => {
+export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, lang, isDevMode, setIsDevMode, onSaveConversation, onSavePdf, onClearTranscript, copyButtonText, t }) => {
     const [isAdultMode, setIsAdultMode] = useState(() => localStorage.getItem('isAdultMode') === 'true');
     const [customApiKey, setCustomApiKey] = useState(() => localStorage.getItem('customApiKey') || '');
     const [showSaveOptions, setShowSaveOptions] = useState(false);
@@ -21,6 +23,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, l
     useEffect(() => {
         localStorage.setItem('isAdultMode', String(isAdultMode));
     }, [isAdultMode]);
+
+    useEffect(() => {
+        localStorage.setItem('isDevMode', String(isDevMode));
+    }, [isDevMode]);
 
     useEffect(() => {
         localStorage.setItem('customApiKey', customApiKey);
@@ -34,6 +40,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, l
             speakingRate: localStorage.getItem('speakingRate') || '1.0',
             pitch: localStorage.getItem('pitch') || '0',
             isAdultMode,
+            isDevMode,
             lang,
         };
         const blob = new Blob([JSON.stringify(settings, null, 2)], { type: 'application/json' });
@@ -76,6 +83,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, l
                             setIsAdultMode(settings.isAdultMode);
                             localStorage.setItem('isAdultMode', String(settings.isAdultMode));
                         }
+                        if (typeof settings.isDevMode === 'boolean') {
+                            setIsDevMode(settings.isDevMode);
+                            localStorage.setItem('isDevMode', String(settings.isDevMode));
+                        }
                          if (settings.lang) {
                              localStorage.setItem('language', settings.lang);
                          }
@@ -107,6 +118,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, l
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" id="adult-mode" className="sr-only peer" checked={isAdultMode} onChange={() => setIsAdultMode(!isAdultMode)} />
+                            <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                        </label>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-gray-700 rounded-lg">
+                        <div>
+                            <label htmlFor="dev-mode" className="font-medium text-white">{t.devMode}</label>
+                            <p className="text-xs text-gray-400">{t.devModeDesc}</p>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="dev-mode" className="sr-only peer" checked={isDevMode} onChange={() => setIsDevMode(!isDevMode)} />
                             <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
                         </label>
                     </div>

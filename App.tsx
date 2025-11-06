@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 // Fix: Imported `Modality` for TTS configuration and removed the unused `GrokBrowser` import that was causing a build error.
-import { GoogleGenAI, Chat, Modality } from '@google/genai';
+import { GoogleGenAI, Chat, Modality, Content } from '@google/genai';
 import { Transcript, Assistant } from './types';
 import { decode, decodeAudioData } from './services/audioUtils';
 import { useLiveSession, Status } from './hooks/useLiveSession';
@@ -24,6 +24,7 @@ const PRESET_ASSISTANTS: Omit<Assistant, 'id'>[] = [
   { titleKey: "persona_writer", prompt: "You are a creative writing partner. Help me brainstorm ideas, develop characters, write dialogue, and overcome writer's block. You can suggest plot twists, describe settings vividly, and help refine my prose." },
   { titleKey: "persona_socratic", prompt: "You are a tutor who uses the Socratic method. Never give direct answers. Instead, ask probing questions that force me to think critically and arrive at the answer myself. Your goal is to deepen my understanding of any topic." },
   { titleKey: "persona_debate", prompt: "You are a world-class debate champion. You can argue for or against any position, regardless of your own 'opinion'. Your arguments are logical, well-structured, and persuasive. You identify weaknesses in my arguments and challenge me to defend my position." },
+  { titleKey: "persona_emdr_therapist", prompt: "## Основная роль и контекст\nТы — ДПДГ-терапевт, работающий по восьмифазному протоколу Ф. Шапиро, с фокусом на безопасность, структуру и поддержку клиента.  \nВажно: не заменяешь очного специалиста; при рисках и остром состоянии рекомендована профессиональная помощь и кризисные службы. \n\n### Критические напоминания\n- Поддержка, психообразование и структурированное руководство, работа по добровольному согласию.  \n- При признаках тяжёлого расстройства или суицидальных идеях — остановка и перенаправление к специалистам.  \n- Конфиденциальность, этика, оценка противопоказаний и готовности к терапии. \n\n***\n\n## Восьмифазный протокол ДПДГ\n\n### Фаза 1: Анамнез и план\nЗадачи: установить контакт; собрать клинический анамнез (ключевые травмы, симптомы, стрессоры, попытки лечения, ресурсы); выбрать мишени (прошлое, триггеры, будущее); оценить готовность; согласовать план.  \nКлючевые вопросы: когда началось; чем вызвано; влияние на жизнь; что пробовали; сильные стороны и мотивация. \n\nПример:  \n\"Здравствуйте! Что привело вас? С какими трудностями хотите поработать в первую очередь?\" \n\n***\n\n### Фаза 2: Подготовка и безопасность\nОбъяснение механизма ДПДГ и билатеральной стимуляции; ожидания по этапам; ответы на вопросы.  \nОбучение саморегуляции: безопасное место, дыхание 4‑7‑8, контейнеризация, заземление 5‑4‑3‑2‑1; проверка готовности. \n\nБезопасное место:  \n\"Представьте место полной безопасности. Какие там цвета, звуки, запахи? Как вы себя чувствуете?\" \n\nЗаземление 5‑4‑3‑2‑1:  \n\"5 вижу, 4 касаюсь, 3 слышу, 2 чувствую запах, 1 вкус.\" \n\n***\n\n### Фаза 3: Оценка и мишень\nВыбор конкретного воспоминания; активация с описанием. Компоненты: образ, отрицательное убеждение о себе, эмоции, телесные ощущения; формирование желаемого позитивного убеждения.  \nИзмерения: SUD 0‑10 (дистресс) и VOC 1‑7 (истинность позитивной когниции). \n\nПример:  \n\"Вспомните самый острый момент. Какая мысль о себе возникает? Какие эмоции и ощущения в теле? На SUD 0‑10, насколько тревожно? Какое убеждение хотите вместо старого?\" \n\nШаблон фиксации:  \n- Образ; отрицательное убеждение; позитивное убеждение.  \n- Эмоции; телесные ощущения; SUD (старт); VOC позитивного убеждения. \n\n***\n\n### Фаза 4: Десенситизация\nФокус на образ‑мысль‑эмоции‑ощущения при билатеральной стимуляции до снижения SUD до 0‑1.  \nВарианты стимуляции: визуальная (движение слева‑направо), аудиальная (чередующиеся тоны), тактильная (постукивания). \n\nПроцедура набора (20‑30 сек):  \n1) Напоминание фокуса; 2) стимуляция; 3) \"Отпустите — что произошло?\"; 4) использовать ответ как новый фокус; 5) повтор до SUD 0‑1. \n\nПример:  \n\"Держите образ, мысль и ощущения в фокусе. Следите глазами: >>> <<< … Отпустите. Что сейчас?\" \n\n***\n\n### Фаза 5: Установка позитивного убеждения\nПри SUD 0‑1 перейти к желаемому убеждению, уточнить формулировку, измерить VOC, проводить наборы до VOC 6‑7.  \nПример: \"Держите мысль 'я справляюсь'. На 1‑7 — насколько это истинно сейчас? Продолжаем до прочного ощущения истинности.\" \n\n***\n\n### Фаза 6: Сканирование тела\nИнструкция: представить себя с новым убеждением и медленно просканировать тело сверху вниз.  \nЕсли остались ощущения — сфокусироваться и провести несколько наборов до нейтральности. \n\n***\n\n### Фаза 7: Закрытие\nУбедиться в стабильности; при необходимости — релаксация, дыхание, безопасное место.  \nНапомнить техники самопомощи, контейнеризацию между сессиями, ответить на вопросы, запланировать встречу. \n\nДомашние техники: дыхание 4‑7‑8; безопасное место; 5‑4‑3‑2‑1. \n\n***\n\n### Фаза 8: Переоценка\nНа следующей сессии: что изменилось; текущий SUD по обработанной памяти; появились ли новые мишени; приоритизация; повтор фаз 3‑7 или завершение при достижении целей. \n\n***\n\n## Инструменты и шкалы\n\n### SUD (0‑10)\n0‑1 обработано; 2‑3 минимально; 4‑6 умеренно; 7‑10 высоко.  \nВопрос: \"На 0‑10, насколько тревожно сейчас?\" \n\n### VOC (1‑7)\n1‑2 не верится; 3‑4 слегка; 5 умеренно; 6‑7 полностью.  \nВопрос: \"Насколько истинно убеждение '[формулировка]' на 1‑7?\" \n\n### Билатеральная стимуляция\n- Визуальная: слева‑направо и обратно, 20‑30 сек.  \n- Аудиальная: левый‑правый звук, ритмично.  \n- Тактильная: чередующиеся постукивания/сжатия.  \n- Текстовая/метроном: ровный темп ~1 сек на тик. \n\n***\n\n## Примеры позитивных убеждений\nВместо \"я беспомощен\" — \"я справляюсь\".  \nВместо \"я в опасности\" — \"я в безопасности\".  \nВместо \"я виноват\" — \"я сделал лучшее из возможного\".  \nВместо \"я слаб\" — \"я силён и стоек\".  \nВместо \"я не контролирую\" — \"я влияю на свою жизнь\".  \nВместо \"я плохой\" — \"я достойный\".  \nВместо \"я одинок\" — \"я с поддержкой\".  \nВместо \"никогда не оправлюсь\" — \"я исцеляюсь и расту\". \n\n***\n\n## Если клиент застрял\n- Уточнить фокус текущих мыслей/образов; при необходимости сменить мишень.  \n- Поменять тип стимуляции; вернуться к безопасному месту для стабилизации.  \n- Проверить готовность и усилить навыки саморегуляции. \n\n## Если наводнение эмоциями\n- Немедленно остановить стимуляцию; безопасное место; заземление 5‑4‑3‑2‑1; дыхание 4‑7‑8.  \n- Пауза; возобновление позже в более медленном темпе. \n\n## Если суицидальные идеи\nОстановить работу с травмой; рекомендовать срочную помощь: психиатр/психолог, горячие линии, обратиться к близким/врачам.  \n\n***\n\n## Противопоказания к самостоятельной ДПДГ\nАктивный психоз; эпилепсия/судороги; нелечённое злоупотребление веществами; острый суицидальный риск; тяжёлая нестабильность; недавно начатые психотропные препараты.  \n\n***\n\n## Структура сессии (50‑90 мин)\n1) Чек‑ин (5): самочувствие, события.  \n2) Фокус (5‑10): выбор мишени, компоненты, SUD/VOC.  \n3) Основная работа (25‑50): наборы, ассоциации, контроль SUD.  \n4) Установка (10‑15): позитивное убеждение до VOC 6‑7.  \n5) Скан тела (5): остаточные ощущения.  \n6) Закрытие (5‑10): самопомощь, контейнеризация, план. \n\n***\n\n## Этические принципы\nДелай: уважай автономию и темп клиента; следи за невербальными сигналами; соблюдай конфиденциальность; используй доказательные методы; перенаправляй при рисках; обозначай границы возможностей ИИ.  \nНе делай: диагнозы и медрекомендации; работа в кризисе без надзора; обещания быстрых результатов; осуждение; давление при неготовности. \n\n***\n\n## Короткие сценарии\n\nПервая сессия:  \n\"Спасибо, что пришли. Расскажите, какие события беспокоят в первую очередь и когда это началось.\" \n\nГотовность к обработке:  \n\"Представьте самый острый момент. Какая мысль о себе? Эмоции? Где в теле? SUD 0‑10? Какое убеждение хотите вместо?\" \n\nВо время десенситизации:  \n\"Держите образ, мысль и ощущения. Следите глазами: >>> <<< … Отпустите. Что сейчас?\" \n\n***\n\n## Рекомендации\n- Не торопиться; индивидуальный темп — норма.  \n- Любопытство с уважением; не настаивать.  \n- Помнить о телесных проявлениях травмы.  \n- Паузы и тишина — часть процесса.  \n- При рисках — направлять к специалистам.  \n- Документировать SUD и VOC для мониторинга.  \n- Психообразование снижает страх и повышает контроль.  \n- Поддерживать надежду и веру в процесс." },
 ];
 
 const VOICES = ['Zephyr', 'Puck', 'Charon', 'Kore', 'Fenrir'];
@@ -57,6 +58,8 @@ const I18N: Record<Language, Record<string, string>> = {
     advancedSettings: "Advanced Settings",
     adultMode: "Unfiltered 18+ Mode",
     adultModeDesc: "Enables deeper, more candid conversations.",
+    devMode: "Developer Mode",
+    devModeDesc: "Enables verbose logging for debugging.",
     customApiKey: "Custom Gemini API Key",
     customApiKeyPlaceholder: "Enter your Gemini API Key",
     customApiKeyDesc: "If empty, a default key will be used.",
@@ -94,6 +97,7 @@ const I18N: Record<Language, Record<string, string>> = {
     persona_socratic: "Socratic Tutor",
     persona_debate: "Debate Champion",
     persona_eloquence: "Master of Eloquent Expression",
+    persona_emdr_therapist: "Psychotherapist (EMDR Protocol)",
   },
   ru: {
     title: "Голосовой Ассистент",
@@ -123,6 +127,8 @@ const I18N: Record<Language, Record<string, string>> = {
     advancedSettings: "Расширенные настройки",
     adultMode: "Режим 18+ без фильтров",
     adultModeDesc: "Включает более глубокие и откровенные диалоги.",
+    devMode: "Режим разработчика",
+    devModeDesc: "Включает подробное логирование для отладки.",
     customApiKey: "Свой API ключ Gemini",
     customApiKeyPlaceholder: "Введите свой API ключ Gemini",
     customApiKeyDesc: "Если пусто, будет использован ключ по умолчанию.",
@@ -160,6 +166,7 @@ const I18N: Record<Language, Record<string, string>> = {
     persona_socratic: "Сократовский Наставник",
     persona_debate: "Чемпион по Дебатам",
     persona_eloquence: "Мастер Изящной Словесности",
+    persona_emdr_therapist: "Психотерапевт (ДПДГ Протокол)",
      // Persona Prompts (RU)
     prompt_persona_companion: "Вы терпеливый, добрый и уважительный компаньон для пожилого человека. Говорите четко и в спокойном темпе. Избегайте сложных слов и современного сленга. Ваша основная роль — быть прекрасным слушателем, проявляя искренний интерес к их историям, воспоминаниям и повседневной жизни. Задавайте открытые вопросы об их прошлом, семье и чувствах. Будьте ободряющим, позитивным и источником веселой компании. Вы здесь, чтобы помочь им почувствовать себя услышанными, ценными и менее одинокими.",
     prompt_persona_eloquence: "Вы — Мастер Изящной Словесности, виртуоз просторечия. Ваша миссия — научить пользователя заменять грубую брань остроумными, искусными и запоминающимися выражениями. Ваша речь театральна, умна и слегка иронична. Вы никогда не используете настоящую брань. Вместо этого вы черпаете вдохновение из богатого источника умных оскорблений и восклицаний из классической литературы и кино.\n\nВаша база знаний включает:\n- Произведения Ильфа и Петрова (особенно «Двенадцать стульев» и «Золотой теленок»).\n- Сатирические рассказы Михаила Зощенко и Николая Гоголя.\n- Знаменитые фразы из советских комедий, таких как «Бриллиантовая рука», «Иван Васильевич меняет профессию» и «Джентльмены удачи».\n- Изобретательные восклицания из мультфильма «Смешарики» (например, «Ёлки-иголки!»).\n\nКогда пользователь хочет выразить разочарование или оскорбить кого-то, проанализируйте его ситуацию и предложите несколько креативных альтернатив, объясняя нюансы и происхождение каждой фразы. Побуждайте его быть более лингвистически изобретательным.",
@@ -185,6 +192,15 @@ const getPersonaDisplayPrompt = (assistant: Assistant, lang: Language) => {
         return I18N.ru[promptKey] || assistant.prompt;
     }
     return assistant.prompt;
+};
+
+const transcriptToHistory = (transcript: Transcript[]): Content[] => {
+    return transcript
+        .filter(entry => entry.text.trim() !== '') // Ensure we don't send empty messages
+        .map(entry => ({
+            role: entry.speaker === 'You' ? 'user' : 'model',
+            parts: [{ text: entry.text }],
+        }));
 };
 
 export const App: React.FC = () => {
@@ -226,6 +242,7 @@ export const App: React.FC = () => {
   const [logs, setLogs] = useState<string[]>([]);
   const [showLogs, setShowLogs] = useState(false);
   const [numMessagesToDisplay, setNumMessagesToDisplay] = useState(50);
+  const [isDevMode, setIsDevMode] = useState(() => localStorage.getItem('isDevMode') === 'true');
 
   const [textInputValue, setTextInputValue] = useState('');
   const [copyButtonText, setCopyButtonText] = useState('');
@@ -235,36 +252,80 @@ export const App: React.FC = () => {
   const sourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
   const chatRef = useRef<Chat | null>(null);
   const transcriptEndRef = useRef<HTMLDivElement | null>(null);
+  const playAudioRef = useRef<((base64Audio: string) => Promise<void>) | null>(null);
 
   const t = I18N[lang];
 
-  const log = useCallback((message: string) => {
-    console.log(message);
-    setLogs(prev => [...prev.slice(-100), `[${new Date().toLocaleTimeString()}] ${message}`]);
-  }, []);
+  const log = useCallback((message: string, level: 'INFO' | 'ERROR' | 'DEBUG' = 'DEBUG') => {
+    const fullMessage = `[${new Date().toLocaleTimeString()}] ${message}`;
+    // Always log to console for developers
+    if (level === 'ERROR') {
+        console.error(fullMessage);
+    } else {
+        console.log(fullMessage);
+    }
+    
+    // Log to UI based on dev mode
+    if (level === 'ERROR' || level === 'INFO' || isDevMode) {
+        setLogs(prev => [...prev.slice(-100), fullMessage]);
+    }
+  }, [isDevMode]);
 
   const getAi = useCallback(() => {
     const key = localStorage.getItem('customApiKey') || process.env.API_KEY;
     if (!key) {
-      log("API Key is missing.");
+      log("API Key is missing.", 'ERROR');
       throw new Error("API_KEY environment variable not set.");
     }
     return new GoogleGenAI({ apiKey: key });
   }, [log]);
-  
-  const stopAllAudio = useCallback(() => {
-    sourcesRef.current.forEach(source => {
-      try {
-        source.stop();
-      } catch (e) {
-        // Ignore errors from stopping already stopped sources
-      }
-    });
-    sourcesRef.current.clear();
+
+  const stopPlayback = useCallback(() => {
+    if (sourcesRef.current.size > 0) {
+        log("Interruption: Stopping all current and queued audio playback.", 'INFO');
+        sourcesRef.current.forEach(source => {
+            try {
+                source.stop();
+            } catch (e) {
+                // Ignore errors from stopping a source that hasn't started yet.
+            }
+        });
+        sourcesRef.current.clear();
+    }
     nextStartTimeRef.current = 0;
-    log('All audio playback stopped.');
+  }, [log]);
+  
+  // To fix the ReferenceError, `selectedAssistant` must be defined before it is
+  // passed to the `useLiveSession` hook.
+  const selectedAssistant = useMemo(() => {
+    const presets = PRESET_ASSISTANTS.map((p, i) => ({ ...p, id: `preset-${i}` }));
+    const all = [...presets, ...customAssistants];
+    return all.find(a => a.id === selectedAssistantId) || presets[0];
+  }, [customAssistants, selectedAssistantId]);
+
+  // A stable wrapper function is passed to the hook. This function calls the
+  // "real" playAudio function via a ref to break a circular dependency.
+  const playAudioWrapper = useCallback((base64Audio: string) => {
+    if (playAudioRef.current) {
+        return playAudioRef.current(base64Audio);
+    }
+    log("playAudio callback not yet initialized");
+    return Promise.resolve();
   }, [log]);
 
+  const { status, startSession, stopSession, isSessionActive, setStatus } = useLiveSession({
+    selectedAssistant,
+    selectedVoice,
+    getAi,
+    setTranscript,
+    transcript,
+    playAudio: playAudioWrapper,
+    stopPlayback,
+    log
+  });
+  
+  // The "real" playAudio function depends on state from `useLiveSession`,
+  // creating a circular dependency that is resolved by the ref pattern above.
   const playAudio = useCallback(async (base64Audio: string) => {
     if (!outputAudioContextRef.current || outputAudioContextRef.current.state === 'closed') {
       outputAudioContextRef.current = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
@@ -290,32 +351,22 @@ export const App: React.FC = () => {
       nextStartTimeRef.current += audioBuffer.duration;
       sourcesRef.current.add(source);
     } catch (e) {
-      log(`Audio playback error: ${(e as Error).message}`);
+      log(`Audio playback error: ${(e as Error).message}`, 'ERROR');
       setStatus('ERROR');
     }
-  }, [log]);
+  }, [log, isSessionActive, setStatus]);
 
-  const selectedAssistant = useMemo(() => {
-    const presets = PRESET_ASSISTANTS.map((p, i) => ({ ...p, id: `preset-${i}` }));
-    const all = [...presets, ...customAssistants];
-    return all.find(a => a.id === selectedAssistantId) || presets[0];
-  }, [customAssistants, selectedAssistantId]);
+  // After each render, the ref is updated with the latest `playAudio` function.
+  useEffect(() => {
+    playAudioRef.current = playAudio;
+  }, [playAudio]);
   
-  const { status, startSession, stopSession, isSessionActive, setStatus } = useLiveSession({
-    selectedAssistant,
-    selectedVoice,
-    getAi,
-    setTranscript,
-    playAudio,
-    log
-  });
-
   // Effect to persist transcript to localStorage
   useEffect(() => {
     try {
         localStorage.setItem('transcript', JSON.stringify(transcript));
     } catch (e) {
-        log("Error saving transcript to localStorage");
+        log("Error saving transcript to localStorage", 'ERROR');
     }
   }, [transcript, log]);
 
@@ -351,7 +402,7 @@ export const App: React.FC = () => {
     try {
         localStorage.setItem('assistants', JSON.stringify(customAssistants));
     } catch (e) {
-        log("Error saving custom assistants to localStorage");
+        log("Error saving custom assistants to localStorage", 'ERROR');
     }
   }, [customAssistants, log]);
 
@@ -378,12 +429,12 @@ export const App: React.FC = () => {
 
   const playText = async (text: string) => {
     if (!text || !text.trim()) {
-        log("playText: Canceled due to empty text.");
+        log("playText: Canceled due to empty text.", 'INFO');
         setStatus('IDLE');
         return;
     }
     setStatus('SPEAKING');
-    log(`Generating speech for: "${text.substring(0, 50)}..."`);
+    log(`Generating speech for: "${text.substring(0, 50)}..."`, 'INFO');
     try {
         const ai = getAi();
         const speechConfig = {
@@ -406,9 +457,9 @@ export const App: React.FC = () => {
 
         const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
         if (base64Audio) {
-            log("Speech generated successfully. Playing audio...");
+            log("Speech generated successfully. Playing audio...", 'INFO');
             // Stop any currently playing audio from the live session before playing new TTS
-            stopAllAudio();
+            stopPlayback();
 
             await playAudio(base64Audio);
             if (!isSessionActive) {
@@ -420,11 +471,11 @@ export const App: React.FC = () => {
                 }, 100);
             }
         } else {
-            log("TTS API response did not contain audio data.");
+            log("TTS API response did not contain audio data.", 'INFO');
             setStatus('IDLE');
         }
     } catch (error: any) {
-        log(`Error in playText: ${error.message}`);
+        log(`Error in playText: ${error.message}`, 'ERROR');
         console.error(error);
         setStatus('ERROR');
     }
@@ -434,39 +485,43 @@ export const App: React.FC = () => {
     const text = textInputValue.trim();
     if (!text || !selectedAssistant) return;
 
-    if(status !== 'IDLE') await stopSession(false);
+    if (status !== 'IDLE') await stopSession(false);
 
     setTextInputValue('');
     setTranscript(prev => [...prev, { speaker: 'You', text, isFinal: true }]);
     setStatus('PROCESSING');
-    log(`Sending text message: "${text}"`);
+    log(`Sending text message: "${text}"`, 'INFO');
 
     try {
-      if (!chatRef.current) {
-        const ai = getAi();
-        chatRef.current = ai.chats.create({ 
-            model: 'gemini-2.5-flash',
-            config: {
-                systemInstruction: selectedAssistant.prompt,
-            }
-        });
-      }
-      const response = await chatRef.current.sendMessage({ message: text });
-      const responseText = response.text;
-      
-      if (responseText) {
-        log(`Received text response: "${responseText.substring(0, 50)}..."`);
-        setTranscript(prev => [...prev, { speaker: 'Gemini', text: responseText, isFinal: true }]);
-        await playText(responseText);
-      } else {
-        log("Received empty text response from chat model.");
-        setStatus('IDLE');
-      }
+        if (!chatRef.current) {
+            log('No chat session found. Creating a new one with history.', 'INFO');
+            const ai = getAi();
+            const history = transcriptToHistory(transcript);
+            chatRef.current = ai.chats.create({
+                model: 'gemini-2.5-flash',
+                config: {
+                    systemInstruction: selectedAssistant.prompt,
+                },
+                history: history,
+            });
+            log(`Chat session created with ${history.length} history items.`, 'INFO');
+        }
+        const response = await chatRef.current.sendMessage({ message: text });
+        const responseText = response.text;
+
+        if (responseText) {
+            log(`Received text response: "${responseText.substring(0, 50)}..."`, 'INFO');
+            setTranscript(prev => [...prev, { speaker: 'Gemini', text: responseText, isFinal: true }]);
+            await playText(responseText);
+        } else {
+            log("Received empty text response from chat model.", 'INFO');
+            setStatus('IDLE');
+        }
     } catch (error) {
-      log(`Error sending text message: ${(error as Error).message}`);
-      setStatus('ERROR');
+        log(`Error sending text message: ${(error as Error).message}`, 'ERROR');
+        setStatus('ERROR');
     }
-  };
+};
 
   const handleSavePersona = () => {
     if (!editingPersona || !editingPersona.title || !editingPersona.prompt) {
@@ -522,7 +577,7 @@ export const App: React.FC = () => {
   const savePdf = useCallback(() => {
     const { jsPDF } = window.jspdf;
     if (!jsPDF) {
-        log("jsPDF not loaded.");
+        log("jsPDF not loaded.", 'ERROR');
         return;
     }
     const doc = new jsPDF();
@@ -546,17 +601,24 @@ export const App: React.FC = () => {
     doc.save("conversation.pdf");
   }, [transcript, t, log]);
 
-  const handleStartSessionClick = async () => {
-    stopAllAudio();
-    await startSession();
-  };
-
   const displayedTranscript = transcript.slice(-numMessagesToDisplay);
   const canLoadMore = transcript.length > numMessagesToDisplay;
 
   if (!selectedAssistant) {
     return <div className="flex h-screen w-full items-center justify-center bg-gray-900 text-white">Loading...</div>;
   }
+
+  const handleMicButtonClick = () => {
+    if (status === 'SPEAKING') {
+      log('Manual interruption triggered by user.', 'INFO');
+      stopPlayback();
+      setStatus('LISTENING');
+    } else if (status === 'IDLE' || status === 'ERROR') {
+      startSession();
+    } else {
+      stopSession(false);
+    }
+  };
   
   const SettingsPanelContent = () => (
     <>
@@ -564,7 +626,7 @@ export const App: React.FC = () => {
             <h2 className="text-xl font-bold">{t.personaTitle}</h2>
             <div className="flex items-center space-x-2">
                  <button onClick={() => setIsSettingsModalOpen(true)} className="p-2 rounded-full hover:bg-gray-700">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0L7.86 5.89c-.38.23-.8.43-1.25.59L3.5 7.1c-1.51.22-2.14 2.03-1.06 3.09l2.12 2.12c.16.16.27.36.33.58l.43 1.9c.22 1.01 1.43 1.55 2.4.9l2.36-1.52c.23-.15.5-.23.77-.23s.54.08.77.23l2.36 1.52c.97.65 2.18.11 2.4-.9l.43-1.9c.06-.22.17-.42.33-.58l2.12-2.12c1.08-1.06.45-2.87-1.06-3.09l-3.11-.62c-.45-.09-.87-.28-1.25-.59l-.65-2.72zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" /></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="http://www.w3.org/2000/svg" fill="currentColor"><path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0L7.86 5.89c-.38.23-.8.43-1.25.59L3.5 7.1c-1.51.22-2.14 2.03-1.06 3.09l2.12 2.12c.16.16.27.36.33.58l.43 1.9c.22 1.01 1.43 1.55 2.4.9l2.36-1.52c.23-.15.5-.23.77-.23s.54.08.77.23l2.36 1.52c.97.65 2.18.11 2.4-.9l.43-1.9c.06-.22.17-.42.33-.58l2.12-2.12c1.08-1.06.45-2.87-1.06-3.09l-3.11-.62c-.45-.09-.87-.28-1.25-.59l-.65-2.72zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" /></svg>
                 </button>
                 <select value={lang} onChange={e => setLang(e.target.value as Language)} className="bg-gray-700 text-white rounded-md p-1 text-sm focus:outline-none">
                     <option value="en">EN</option>
@@ -618,10 +680,10 @@ export const App: React.FC = () => {
                         setPersonaView('edit');
                     }
                 }} className="p-2 bg-gray-700 rounded-md hover:bg-gray-600" aria-label={t.editPersona}>
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fillRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" /></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="http://www.w3.org/2000/svg" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fillRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" /></svg>
                 </button>
                  <button onClick={() => setIsPersonaInfoModalOpen(true)} className="p-2 bg-gray-700 rounded-md hover:bg-gray-600" aria-label="Persona Info">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" /></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="http://www.w3.org/2000/svg" fill="currentColor"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" /></svg>
                 </button>
             </div>
           </div>
@@ -699,7 +761,7 @@ export const App: React.FC = () => {
               {transcript.length === 0 && (status === 'IDLE' || status === 'ERROR') && (
               <div className="flex-1 flex flex-col items-center justify-center text-center text-gray-400">
                   <p className="mb-4">{t.startMessage}</p>
-                  <button onClick={handleStartSessionClick} className="bg-green-600 text-white p-6 rounded-full hover:bg-green-700 transition-transform transform hover:scale-105 shadow-lg">
+                  <button onClick={startSession} className="bg-green-600 text-white p-6 rounded-full hover:bg-green-700 transition-transform transform hover:scale-105 shadow-lg">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
                   </button>
               </div>
@@ -748,16 +810,16 @@ export const App: React.FC = () => {
               placeholder={t.sendMessage} 
             />
              <button
-              onClick={status === 'IDLE' || status === 'ERROR' ? handleStartSessionClick : () => stopSession(false)}
+              onClick={handleMicButtonClick}
               className={`p-4 rounded-full transition-colors ${status !== 'IDLE' && status !== 'ERROR' ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}
             >
               {status !== 'IDLE' && status !== 'ERROR' ? 
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5 10a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z" clipRule="evenodd" /></svg> :
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="http://www.w3.org/2000/svg" fill="currentColor"><path fillRule="evenodd" d="M5 10a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z" clipRule="evenodd" /></svg> :
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
               }
             </button>
             <button onClick={sendTextMessage} className="bg-green-600 hover:bg-green-700 p-3 rounded-full">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="http://www.w3.org/2000/svg" fill="currentColor"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg>
             </button>
           </div>
           <div className="mt-2 text-xs text-gray-500">
@@ -790,11 +852,15 @@ export const App: React.FC = () => {
         onClose={() => setIsSettingsModalOpen(false)} 
         lang={lang} 
         t={t}
+        isDevMode={isDevMode}
+        setIsDevMode={setIsDevMode}
         onSaveConversation={() => handleCopy(transcript.map(t => `${t.speaker}: ${t.text}`).join('\n'), 'convo-copy')}
         onSavePdf={savePdf}
         onClearTranscript={() => {
+            log('Clearing transcript and resetting chat session.', 'INFO');
             setTranscript([]);
             localStorage.removeItem('transcript');
+            chatRef.current = null;
             setIsSettingsModalOpen(false);
         }}
         copyButtonText={copyButtonText}
