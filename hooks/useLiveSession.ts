@@ -1,3 +1,4 @@
+
 import { useState, useRef, useCallback, useEffect, Dispatch, SetStateAction } from 'react';
 import { GoogleGenAI, LiveServerMessage, Modality } from '@google/genai';
 import { createBlob } from '../services/audioUtils';
@@ -42,7 +43,12 @@ export const useLiveSession = ({
 
   const stopSession = useCallback(async (isRestarting = false) => {
     log(`stopSession called. isRestarting: ${isRestarting}`);
-    isSessionActiveRef.current = false;
+    
+    // A user-initiated stop should prevent any pending reconnects.
+    // A stop for the purpose of restarting should not; it's part of the process.
+    if (!isRestarting) {
+      isSessionActiveRef.current = false;
+    }
     
     if (keepAliveIntervalRef.current) {
         window.clearInterval(keepAliveIntervalRef.current);
@@ -297,13 +303,37 @@ export const useLiveSession = ({
               );
           }
         },
-        onerror: (e: ErrorEvent) => {
+        onerror: async (e: ErrorEvent) => {
           log(`Session error: ${e.message}.`, 'ERROR');
-          handleReconnect();
+          // Fix: Added specific handling for permission errors. Retrying is futile if the API key is invalid,
+          // so the session is stopped immediately and a descriptive error is logged, improving user feedback
+          // and preventing the app from getting stuck in a reconnection loop.
+          if (e.message.includes('permission')) {
+              log('This may be an API key issue. Halting reconnection attempts.', 'ERROR');
+              log('Please check your custom API key in settings, or ensure the default key has the "Generative Language API" enabled in its Google Cloud project.', 'INFO');
+              await stopSession();
+              setStatus('ERROR');
+          } else {
+            await handleReconnect();
+          }
         },
-        onclose: (e: CloseEvent) => {
+        onclose: async (e: CloseEvent) => {
           log(`Session closed remotely. Code: ${e.code}, Reason: "${e.reason}", Was Clean: ${e.wasClean}`, 'INFO');
-          handleReconnect();
+
+          // Fix: Smarter reconnection logic. The app now only attempts to reconnect if the session
+          // was active and closed unexpectedly (uncleanly). This prevents reconnection loops when the user
+          // manually stops the session or when the server closes it cleanly (e.g., due to a timeout).
+          if (!isSessionActiveRef.current) {
+            log('onclose triggered for an intentionally stopped session. No further action needed.');
+            return;
+          }
+
+          if (!e.wasClean) {
+            await handleReconnect();
+          } else {
+            log('Session closed cleanly by server. Returning to idle state.', 'INFO');
+            await stopSession();
+          }
         },
       };
 
