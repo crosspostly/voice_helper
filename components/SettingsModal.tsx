@@ -15,6 +15,7 @@ interface SettingsModalProps {
     t: Record<string, string>;
     customApiKey: string;
     onCustomApiKeyChange: (key: string) => void;
+    onResetApiKey: () => void;
     log: (message: string, level?: 'INFO' | 'ERROR' | 'DEBUG') => void;
 }
 
@@ -31,6 +32,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     t,
     customApiKey,
     onCustomApiKeyChange,
+    onResetApiKey,
     log
 }) => {
     const [isAdultMode, setIsAdultMode] = useState(() => localStorage.getItem('isAdultMode') === 'true');
@@ -131,6 +133,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
     if (!isOpen) return null;
 
+    const isUsingCustomKey = localStorage.getItem('customApiKey') !== null;
+
     return (
         <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50" onClick={onClose}>
             <div className="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
@@ -168,14 +172,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                 className="flex-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-2 focus:ring-green-500 focus:outline-none"
                             />
                             <button
-                                onClick={() => {
-                                    onCustomApiKeyChange('');
-                                    alert(t.resetKeySuccess);
-                                }}
-                                className="bg-gray-600 hover:bg-gray-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded-md text-sm whitespace-nowrap"
-                                disabled={!customApiKey}
+                                onClick={onResetApiKey}
+                                className="bg-gray-600 hover:bg-gray-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2 px-3 rounded-md text-sm whitespace-nowrap transition-colors"
+                                disabled={!isUsingCustomKey}
+                                title={isUsingCustomKey ? t.resetToDefault : 'Already using default key'}
                             >
-                                {t.resetToDefault}
+                                ↺
                             </button>
                         </div>
                         <p className="text-xs text-gray-400 mt-1">{t.customApiKeyDesc}</p>
