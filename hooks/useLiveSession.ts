@@ -1,5 +1,3 @@
-
-
 import { useState, useRef, useCallback, useEffect, Dispatch, SetStateAction } from 'react';
 import { GoogleGenAI, LiveServerMessage, Modality } from '@google/genai';
 import { createBlob } from '../services/audioUtils';
@@ -165,9 +163,15 @@ export const useLiveSession = ({
         }
       };
 
-      log('Requesting microphone access...');
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      log('Microphone access granted.', 'INFO');
+      log('Requesting microphone access with echo cancellation...');
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      });
+      log('Microphone access granted with echo cancellation enabled.', 'INFO');
       
       stream.getTracks().forEach(track => {
         track.onended = () => {
@@ -309,8 +313,19 @@ export const useLiveSession = ({
         },
         onerror: async (e: ErrorEvent) => {
           log(`Session error: ${e.message}.`, 'ERROR');
-          if (e.message.includes('permission')) {
-              log('This may be an API key issue. Halting reconnection attempts.', 'ERROR');
+          
+          // Check for permanent errors that should not trigger reconnect
+          const permanentErrors = [
+            'permission', 'API key', 'quota', 'billing', 
+            'PERMISSION_DENIED', 'UNAUTHENTICATED', '429', 'rate limit'
+          ];
+          
+          const isPermanentError = permanentErrors.some(err => 
+            e.message.toLowerCase().includes(err.toLowerCase())
+          );
+          
+          if (isPermanentError) {
+              log('Permanent error detected. Halting reconnection attempts.', 'ERROR');
               log('Please check your custom API key in settings, or ensure the default key has the "Generative Language API" enabled in its Google Cloud project.', 'INFO');
               await stopSession();
               setStatus('ERROR');
@@ -381,7 +396,7 @@ export const useLiveSession = ({
         stopSession();
       }
     };
-  }, [stopSession]);
+  }, [stopSession, log]);
 
   return { status, startSession, stopSession, isSessionActive, setStatus };
 };
