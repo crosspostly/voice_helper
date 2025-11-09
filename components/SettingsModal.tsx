@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const VOICES = ['Zephyr', 'Puck', 'Charon', 'Kore', 'Fenrir']; // Keep a local copy if needed, or pass via props
+const VOICES = ['Zephyr', 'Puck', 'Charon', 'Kore', 'Fenrir'];
 
 interface SettingsModalProps {
     isOpen: boolean;
@@ -13,68 +13,70 @@ interface SettingsModalProps {
     onClearTranscript: () => void;
     copyButtonText: string;
     t: Record<string, string>;
+    customApiKey: string;
+    onCustomApiKeyChange: (key: string) => void;
+    log: (message: string, level?: 'INFO' | 'ERROR' | 'DEBUG') => void;
 }
 
-export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, lang, isDevMode, setIsDevMode, onSaveConversation, onSavePdf, onClearTranscript, copyButtonText, t }) => {
+export const SettingsModal: React.FC<SettingsModalProps> = ({ 
+    isOpen, 
+    onClose, 
+    lang, 
+    isDevMode, 
+    setIsDevMode, 
+    onSaveConversation, 
+    onSavePdf, 
+    onClearTranscript, 
+    copyButtonText, 
+    t,
+    customApiKey,
+    onCustomApiKeyChange,
+    log
+}) => {
     const [isAdultMode, setIsAdultMode] = useState(() => localStorage.getItem('isAdultMode') === 'true');
-    const [customApiKey, setCustomApiKey] = useState(() => localStorage.getItem('customApiKey') || '');
     const [showSaveOptions, setShowSaveOptions] = useState(false);
-    const [notification, setNotification] = useState<string>('');
-    const [isUsingCustomKey, setIsUsingCustomKey] = useState(() => !!localStorage.getItem('customApiKey'));
 
     useEffect(() => {
-        localStorage.setItem('isAdultMode', String(isAdultMode));
-    }, [isAdultMode]);
-
-    useEffect(() => {
-        localStorage.setItem('isDevMode', String(isDevMode));
-    }, [isDevMode]);
-
-    const handleApiKeyChange = (value: string) => {
-        setCustomApiKey(value);
-        if (value.trim()) {
-            localStorage.setItem('customApiKey', value);
-            setIsUsingCustomKey(true);
-            showNotification(lang === 'ru' ? '✓ Свой API ключ активирован' : '✓ Custom API key activated');
-        } else {
-            localStorage.removeItem('customApiKey');
-            setIsUsingCustomKey(false);
-            showNotification(lang === 'ru' ? '✓ Использован ключ по умолчанию' : '✓ Using default API key');
+        try {
+            localStorage.setItem('isAdultMode', String(isAdultMode));
+        } catch(e) {
+            log(`Failed to save isAdultMode to localStorage: ${(e as Error).message}`, 'ERROR');
         }
-    };
+    }, [isAdultMode, log]);
 
-    const handleResetApiKey = () => {
-        setCustomApiKey('');
-        localStorage.removeItem('customApiKey');
-        setIsUsingCustomKey(false);
-        showNotification(lang === 'ru' ? '✓ Ключ сброшен на стандартный' : '✓ Reset to default API key');
-    };
+    useEffect(() => {
+        try {
+            localStorage.setItem('isDevMode', String(isDevMode));
+        } catch(e) {
+            log(`Failed to save isDevMode to localStorage: ${(e as Error).message}`, 'ERROR');
+        }
+    }, [isDevMode, log]);
 
-    const showNotification = (message: string) => {
-        setNotification(message);
-        setTimeout(() => setNotification(''), 3000);
-    };
-    
     const handleExportSettings = () => {
-        const settings = {
-            assistants: JSON.parse(localStorage.getItem('assistants') || '[]'),
-            selectedAssistantId: localStorage.getItem('selectedAssistantId') || '',
-            selectedVoice: localStorage.getItem('selectedVoice') || VOICES[0],
-            speakingRate: localStorage.getItem('speakingRate') || '1.0',
-            pitch: localStorage.getItem('pitch') || '0',
-            isAdultMode,
-            isDevMode,
-            lang,
-        };
-        const blob = new Blob([JSON.stringify(settings, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'voice-assistant-settings.json';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        try {
+            const settings = {
+                assistants: JSON.parse(localStorage.getItem('assistants') || '[]'),
+                selectedAssistantId: localStorage.getItem('selectedAssistantId') || '',
+                selectedVoice: localStorage.getItem('selectedVoice') || VOICES[0],
+                speakingRate: localStorage.getItem('speakingRate') || '1.0',
+                pitch: localStorage.getItem('pitch') || '0',
+                isAdultMode,
+                isDevMode,
+                lang,
+            };
+            const blob = new Blob([JSON.stringify(settings, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'voice-assistant-settings.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch (e) {
+            log(`Failed to export settings: ${(e as Error).message}`, 'ERROR');
+            alert('Failed to export settings.');
+        }
     };
 
     const handleImportSettings = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -118,7 +120,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, l
                         window.location.reload(); 
                     }
                 } catch (error) {
-                    console.error("Failed to parse settings file:", error);
+                    log(`Failed to parse settings file: ${(error as Error).message}`, 'ERROR');
                     alert(t.importError);
                 }
             };
@@ -131,11 +133,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, l
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50" onClick={onClose}>
-            {notification && (
-                <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-[60] animate-fade-in">
-                    {notification}
-                </div>
-            )}
             <div className="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
                 <h2 className="text-xl font-bold mb-6 text-center">{t.advancedSettings}</h2>
                 <div className="space-y-4">
@@ -160,34 +157,26 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, l
                         </label>
                     </div>
                     <div className="p-3 bg-gray-700 rounded-lg">
-                        <div className="flex items-center justify-between mb-2">
-                            <label htmlFor="api-key-input" className="block font-medium text-white">{t.customApiKey}</label>
-                            {isUsingCustomKey && (
-                                <span className="text-xs text-green-400 font-semibold">{lang === 'ru' ? '● Свой ключ' : '● Custom key'}</span>
-                            )}
-                            {!isUsingCustomKey && (
-                                <span className="text-xs text-gray-400">{lang === 'ru' ? '○ По умолчанию' : '○ Default'}</span>
-                            )}
-                        </div>
-                        <div className="flex space-x-2">
+                        <label htmlFor="api-key-input" className="block font-medium text-white mb-1">{t.customApiKey}</label>
+                        <div className="flex items-center space-x-2">
                             <input
                                 id="api-key-input"
                                 type="password"
                                 value={customApiKey}
-                                onChange={(e) => setCustomApiKey(e.target.value)}
-                                onBlur={(e) => handleApiKeyChange(e.target.value)}
+                                onChange={(e) => onCustomApiKeyChange(e.target.value)}
                                 placeholder={t.customApiKeyPlaceholder}
-                                className="flex-1 bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-2 focus:ring-green-500 focus:outline-none"
+                                className="flex-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-2 focus:ring-green-500 focus:outline-none"
                             />
-                            {isUsingCustomKey && (
-                                <button
-                                    onClick={handleResetApiKey}
-                                    className="bg-amber-600 hover:bg-amber-700 text-white px-3 py-2 rounded-md transition-colors text-sm font-semibold"
-                                    title={lang === 'ru' ? 'Сбросить' : 'Reset'}
-                                >
-                                    ↺
-                                </button>
-                            )}
+                            <button
+                                onClick={() => {
+                                    onCustomApiKeyChange('');
+                                    alert(t.resetKeySuccess);
+                                }}
+                                className="bg-gray-600 hover:bg-gray-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded-md text-sm whitespace-nowrap"
+                                disabled={!customApiKey}
+                            >
+                                {t.resetToDefault}
+                            </button>
                         </div>
                         <p className="text-xs text-gray-400 mt-1">{t.customApiKeyDesc}</p>
                     </div>

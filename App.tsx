@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-// Fix: Imported `Modality` for TTS configuration and removed the unused `GrokBrowser` import that was causing a build error.
 import { GoogleGenAI, Chat, Modality, Content } from '@google/genai';
 import { Transcript, Assistant } from './types';
 import { decode, decodeAudioData } from './services/audioUtils';
@@ -8,9 +7,26 @@ import { StatusIndicator } from './components/StatusIndicator';
 import { SettingsModal } from './components/SettingsModal';
 import { PersonaInfoModal } from './components/PersonaInfoModal';
 
-
 type Language = 'en' | 'ru';
 type PersonaView = 'select' | 'edit' | 'add';
+
+// --- Local Hook for Gemini AI Initialization ---
+const useGemini = (customApiKey: string | null) => {
+  return useMemo(() => {
+    const apiKey = customApiKey || process.env.API_KEY;
+    if (!apiKey) {
+      console.error("Gemini API Key is missing. Please provide one in the settings or environment variables.");
+      return null;
+    }
+    try {
+      return new GoogleGenAI({ apiKey });
+    } catch (e) {
+      console.error("Failed to initialize GoogleGenAI:", e);
+      return null;
+    }
+  }, [customApiKey]);
+};
+
 
 const PRESET_ASSISTANTS: Omit<Assistant, 'id'>[] = [
   { titleKey: "persona_companion", prompt: "You are a patient, kind, and respectful companion for an elderly person. Speak clearly and at a gentle pace. Avoid complex words and modern slang. Your primary role is to be a wonderful listener, showing genuine interest in their stories, memories, and daily life. Ask open-ended questions about their past, their family, and their feelings. Be encouraging, positive, and a source of cheerful company. You are here to help them feel heard, valued, and less lonely." },
@@ -85,6 +101,9 @@ const I18N: Record<Language, Record<string, string>> = {
     clearLogs: "Clear",
     loadMore: "Load More",
     clearTranscript: "Clear Transcript",
+    resetToDefault: "Reset",
+    resetKeySuccess: "API Key has been reset to default. It will be used for new sessions.",
+    apiKeyError: "Gemini AI could not be initialized. Please check your API key in the settings.",
     // Persona Titles
     persona_helpful: "Helpful Assistant",
     persona_companion: "Patient Companion",
@@ -154,6 +173,9 @@ const I18N: Record<Language, Record<string, string>> = {
     clearLogs: "Очистить",
     loadMore: "Загрузить еще",
     clearTranscript: "Очистить диалог",
+    resetToDefault: "Сбросить",
+    resetKeySuccess: "API ключ сброшен на ключ по умолчанию. Он будет использован для новых сессий.",
+    apiKeyError: "Не удалось инициализировать Gemini AI. Проверьте ваш API ключ в настройках.",
     // Persona Titles
     persona_helpful: "Полезный Ассистент",
     persona_companion: "Терпеливый Собеседник",
@@ -207,16 +229,11 @@ export const App: React.FC = () => {
   const [transcript, setTranscript] = useState<Transcript[]>(() => {
     try {
         const stored = localStorage.getItem('transcript');
-        if (stored) {
-            const parsed = JSON.parse(stored);
-            if (Array.isArray(parsed)) {
-                return parsed;
-            }
-        }
+        return stored ? JSON.parse(stored) : [];
     } catch (e) {
         console.error("Failed to load transcript from localStorage", e);
+        return [];
     }
-    return [];
   });
   
   const [customAssistants, setCustomAssistants] = useState<Assistant[]>(() => {
@@ -228,6 +245,16 @@ export const App: React.FC = () => {
         return [];
     }
   });
+  
+  const [customApiKey, setCustomApiKey] = useState<string>(() => {
+    try {
+        return localStorage.getItem('customApiKey') || '';
+    } catch (e) {
+        console.error("Failed to read customApiKey from localStorage", e);
+        return '';
+    }
+  });
+
   const [selectedAssistantId, setSelectedAssistantId] = useState<string>('');
   const [selectedVoice, setSelectedVoice] = useState<string>(() => localStorage.getItem('selectedVoice') || VOICES[0]);
   const [speakingRate, setSpeakingRate] = useState<string>(() => localStorage.getItem('speakingRate') || '1.0');
@@ -253,31 +280,30 @@ export const App: React.FC = () => {
   const chatRef = useRef<Chat | null>(null);
   const transcriptEndRef = useRef<HTMLDivElement | null>(null);
   const playAudioRef = useRef<((base64Audio: string) => Promise<void>) | null>(null);
-
+  
+  const ai = useGemini(customApiKey);
   const t = I18N[lang];
 
   const log = useCallback((message: string, level: 'INFO' | 'ERROR' | 'DEBUG' = 'DEBUG') => {
     const fullMessage = `[${new Date().toLocaleTimeString()}] ${message}`;
-    // Always log to console for developers
     if (level === 'ERROR') {
         console.error(fullMessage);
     } else {
         console.log(fullMessage);
     }
     
-    // Log to UI based on dev mode
     if (level === 'ERROR' || level === 'INFO' || isDevMode) {
         setLogs(prev => [...prev.slice(-100), fullMessage]);
     }
   }, [isDevMode]);
-
-  const getAi = useCallback(() => {
-    const key = localStorage.getItem('customApiKey') || process.env.API_KEY;
-    if (!key) {
-      log("API Key is missing.", 'ERROR');
-      throw new Error("API_KEY environment variable not set.");
+  
+  const handleCustomApiKeyChange = useCallback((key: string) => {
+    try {
+        localStorage.setItem('customApiKey', key);
+        setCustomApiKey(key);
+    } catch (e) {
+        log('Failed to save custom API key to localStorage', 'ERROR');
     }
-    return new GoogleGenAI({ apiKey: key });
   }, [log]);
 
   const stopPlayback = useCallback(() => {
@@ -295,16 +321,12 @@ export const App: React.FC = () => {
     nextStartTimeRef.current = 0;
   }, [log]);
   
-  // To fix the ReferenceError, `selectedAssistant` must be defined before it is
-  // passed to the `useLiveSession` hook.
   const selectedAssistant = useMemo(() => {
     const presets = PRESET_ASSISTANTS.map((p, i) => ({ ...p, id: `preset-${i}` }));
     const all = [...presets, ...customAssistants];
     return all.find(a => a.id === selectedAssistantId) || presets[0];
   }, [customAssistants, selectedAssistantId]);
 
-  // A stable wrapper function is passed to the hook. This function calls the
-  // "real" playAudio function via a ref to break a circular dependency.
   const playAudioWrapper = useCallback((base64Audio: string) => {
     if (playAudioRef.current) {
         return playAudioRef.current(base64Audio);
@@ -314,9 +336,9 @@ export const App: React.FC = () => {
   }, [log]);
 
   const { status, startSession, stopSession, isSessionActive, setStatus } = useLiveSession({
+    ai,
     selectedAssistant,
     selectedVoice,
-    getAi,
     setTranscript,
     transcript,
     playAudio: playAudioWrapper,
@@ -324,8 +346,6 @@ export const App: React.FC = () => {
     log
   });
   
-  // The "real" playAudio function depends on state from `useLiveSession`,
-  // creating a circular dependency that is resolved by the ref pattern above.
   const playAudio = useCallback(async (base64Audio: string) => {
     if (!outputAudioContextRef.current || outputAudioContextRef.current.state === 'closed') {
       outputAudioContextRef.current = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
@@ -356,12 +376,10 @@ export const App: React.FC = () => {
     }
   }, [log, isSessionActive, setStatus]);
 
-  // After each render, the ref is updated with the latest `playAudio` function.
   useEffect(() => {
     playAudioRef.current = playAudio;
   }, [playAudio]);
   
-  // Effect to persist transcript to localStorage
   useEffect(() => {
     try {
         localStorage.setItem('transcript', JSON.stringify(transcript));
@@ -370,8 +388,6 @@ export const App: React.FC = () => {
     }
   }, [transcript, log]);
 
-  
-  // Effect to manage language settings and auto-detection
   useEffect(() => {
     const storedLang = localStorage.getItem('language');
     if (storedLang) {
@@ -380,13 +396,21 @@ export const App: React.FC = () => {
       const browserLang = navigator.language.split('-')[0];
       const newLang = browserLang === 'ru' ? 'ru' : 'en';
       setLang(newLang);
-      localStorage.setItem('language', newLang);
+      try {
+        localStorage.setItem('language', newLang);
+      } catch (e) {
+        log("Error saving language to localStorage", 'ERROR');
+      }
     }
-  }, []);
+  }, [log]);
 
   useEffect(() => {
-    localStorage.setItem('language', lang);
-  }, [lang]);
+    try {
+      localStorage.setItem('language', lang);
+    } catch (e) {
+      log("Error saving language to localStorage", 'ERROR');
+    }
+  }, [lang, log]);
 
   const allAssistants = useMemo(() => {
     const presets = PRESET_ASSISTANTS.map((p, i) => ({ ...p, id: `preset-${i}` }));
@@ -396,8 +420,6 @@ export const App: React.FC = () => {
   const presetAssistants = useMemo(() => allAssistants.filter(a => a.id.startsWith('preset-')), [allAssistants]);
   const userCustomAssistants = useMemo(() => allAssistants.filter(a => !a.id.startsWith('preset-')), [allAssistants]);
 
-
-  // Effect to persist custom assistants to localStorage
   useEffect(() => {
     try {
         localStorage.setItem('assistants', JSON.stringify(customAssistants));
@@ -406,14 +428,13 @@ export const App: React.FC = () => {
     }
   }, [customAssistants, log]);
 
-
-  // Effect to initialize selected assistant ID
   useEffect(() => {
       const storedId = localStorage.getItem('selectedAssistantId');
       if (storedId && allAssistants.some(a => a.id === storedId)) {
         setSelectedAssistantId(storedId);
       } else if (allAssistants.length > 0) {
-        setSelectedAssistantId(allAssistants.find(a => a.id.startsWith('preset-'))?.id || '');
+        const defaultId = allAssistants.find(a => a.id.startsWith('preset-'))?.id || '';
+        setSelectedAssistantId(defaultId);
       }
   }, [allAssistants]);
 
@@ -423,9 +444,53 @@ export const App: React.FC = () => {
     }
   }, [transcript]);
 
-  const personaSupportsRateAndPitch = useCallback((persona?: Assistant) => {
-      return false;
-  }, []);
+  const personaSupportsRateAndPitch = useCallback(() => false, []);
+  
+  const handleSelectedAssistantChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+    const { value } = e.target;
+    if (value === 'add-new') {
+        setEditingPersona({ title: '', prompt: '' });
+        setPersonaView('add');
+    } else {
+        setSelectedAssistantId(value);
+        try {
+            localStorage.setItem('selectedAssistantId', value);
+        } catch (err) {
+            log(`Failed to save selectedAssistantId: ${(err as Error).message}`, 'ERROR');
+        }
+        chatRef.current = null;
+    }
+  }, [log]);
+  
+  const handleVoiceChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newVoice = e.target.value;
+    setSelectedVoice(newVoice);
+    try {
+        localStorage.setItem('selectedVoice', newVoice);
+    } catch (err) {
+        log(`Failed to save selectedVoice: ${(err as Error).message}`, 'ERROR');
+    }
+  }, [log]);
+
+  const handleSpeakingRateChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const newRate = e.target.value;
+    setSpeakingRate(newRate);
+    try {
+        localStorage.setItem('speakingRate', newRate);
+    } catch (err) {
+        log(`Failed to save speakingRate: ${(err as Error).message}`, 'ERROR');
+    }
+  }, [log]);
+
+  const handlePitchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const newPitch = e.target.value;
+    setPitch(newPitch);
+    try {
+        localStorage.setItem('pitch', newPitch);
+    } catch (err) {
+        log(`Failed to save pitch: ${(err as Error).message}`, 'ERROR');
+    }
+  }, [log]);
 
   const playText = async (text: string) => {
     if (!text || !text.trim()) {
@@ -433,10 +498,15 @@ export const App: React.FC = () => {
         setStatus('IDLE');
         return;
     }
+    if (!ai) {
+        log("Gemini AI not initialized. Check API Key.", 'ERROR');
+        setStatus('ERROR');
+        return;
+    }
+
     setStatus('SPEAKING');
     log(`Generating speech for: "${text.substring(0, 50)}..."`, 'INFO');
     try {
-        const ai = getAi();
         const speechConfig = {
           voiceConfig: { 
             prebuiltVoiceConfig: { 
@@ -449,7 +519,6 @@ export const App: React.FC = () => {
             model: "gemini-2.5-flash-preview-tts",
             contents: [{ parts: [{ text }] }],
             config: {
-                // Fix: Replaced string 'AUDIO' with Modality.AUDIO enum for type-safety and adherence to SDK guidelines.
                 responseModalities: [Modality.AUDIO],
                 speechConfig: speechConfig,
             },
@@ -458,7 +527,6 @@ export const App: React.FC = () => {
         const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
         if (base64Audio) {
             log("Speech generated successfully. Playing audio...", 'INFO');
-            // Stop any currently playing audio from the live session before playing new TTS
             stopPlayback();
 
             await playAudio(base64Audio);
@@ -485,6 +553,12 @@ export const App: React.FC = () => {
     const text = textInputValue.trim();
     if (!text || !selectedAssistant) return;
 
+    if (!ai) {
+        log("Gemini AI not initialized. Check API Key.", 'ERROR');
+        setStatus('ERROR');
+        return;
+    }
+
     if (status !== 'IDLE') await stopSession(false);
 
     setTextInputValue('');
@@ -495,7 +569,6 @@ export const App: React.FC = () => {
     try {
         if (!chatRef.current) {
             log('No chat session found. Creating a new one with history.', 'INFO');
-            const ai = getAi();
             const history = transcriptToHistory(transcript);
             chatRef.current = ai.chats.create({
                 model: 'gemini-2.5-flash',
@@ -545,7 +618,11 @@ export const App: React.FC = () => {
         };
         setCustomAssistants(prev => [...prev, newAssistant]);
         setSelectedAssistantId(newAssistant.id);
-        localStorage.setItem('selectedAssistantId', newAssistant.id);
+        try {
+            localStorage.setItem('selectedAssistantId', newAssistant.id);
+        } catch(e) {
+            log('Failed to save selectedAssistantId to localStorage', 'ERROR');
+        }
     }
 
     chatRef.current = null;
@@ -561,7 +638,11 @@ export const App: React.FC = () => {
     if (selectedAssistantId === idToDelete) {
         const firstPresetId = allAssistants.find(a => a.id.startsWith('preset-'))?.id || '';
         setSelectedAssistantId(firstPresetId);
-        localStorage.setItem('selectedAssistantId', firstPresetId);
+        try {
+            localStorage.setItem('selectedAssistantId', firstPresetId);
+        } catch(e) {
+            log('Failed to save selectedAssistantId to localStorage', 'ERROR');
+        }
     }
 
     setPersonaView('select');
@@ -640,16 +721,7 @@ export const App: React.FC = () => {
             <div className="flex items-center space-x-1">
                 <select
                   value={selectedAssistantId}
-                  onChange={(e) => {
-                      if (e.target.value === 'add-new') {
-                          setEditingPersona({ title: '', prompt: '' });
-                          setPersonaView('add');
-                      } else {
-                          setSelectedAssistantId(e.target.value);
-                          localStorage.setItem('selectedAssistantId', e.target.value);
-                          chatRef.current = null;
-                      }
-                  }}
+                  onChange={handleSelectedAssistantChange}
                   className="w-full bg-gray-700 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
                 >
                   <optgroup label="Presets">
@@ -693,20 +765,20 @@ export const App: React.FC = () => {
             <>
             <div>
               <label htmlFor="voice" className="block text-sm font-medium mb-1 mt-4">{t.voiceSelection}</label>
-              <select id="voice" value={selectedVoice} onChange={e => { setSelectedVoice(e.target.value); localStorage.setItem('selectedVoice', e.target.value); }} className="w-full bg-gray-700 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500">
+              <select id="voice" value={selectedVoice} onChange={handleVoiceChange} className="w-full bg-gray-700 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500">
                 {VOICES.map(voice => <option key={voice} value={voice}>{voice}</option>)}
               </select>
             </div>
             
-            {personaSupportsRateAndPitch(selectedAssistant) && (
+            {personaSupportsRateAndPitch() && (
               <>
                  <div>
                     <label htmlFor="speechRate" className="block text-sm font-medium mb-1">{t.speechRate} ({parseFloat(speakingRate).toFixed(2)})</label>
-                    <input type="range" id="speechRate" min="0.5" max="2.0" step="0.1" value={speakingRate} onChange={e => { setSpeakingRate(e.target.value); localStorage.setItem('speakingRate', e.target.value); }} className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer" />
+                    <input type="range" id="speechRate" min="0.5" max="2.0" step="0.1" value={speakingRate} onChange={handleSpeakingRateChange} className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer" />
                  </div>
                  <div>
                     <label htmlFor="pitch" className="block text-sm font-medium mb-1">{t.speechPitch} ({parseFloat(pitch).toFixed(1)})</label>
-                    <input type="range" id="pitch" min="-10" max="10" step="0.5" value={pitch} onChange={e => { setPitch(e.target.value); localStorage.setItem('pitch', e.target.value); }} className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer" />
+                    <input type="range" id="pitch" min="-10" max="10" step="0.5" value={pitch} onChange={handlePitchChange} className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer" />
                  </div>
               </>
             )}
@@ -737,6 +809,11 @@ export const App: React.FC = () => {
 
   return (
     <div className="h-screen bg-gray-900 text-gray-200 flex flex-col font-sans">
+      {!ai && (
+        <div className="bg-red-600 text-white text-center p-2 z-50">
+          {t.apiKeyError}
+        </div>
+      )}
       <div className="md:hidden p-4 bg-gray-800 flex justify-between items-center border-b border-gray-700">
         <h1 className="text-xl font-bold">{t.title}</h1>
         <button onClick={() => setIsPanelVisible(!isPanelVisible)} className="p-2 rounded-full hover:bg-gray-700">
@@ -859,11 +936,18 @@ export const App: React.FC = () => {
         onClearTranscript={() => {
             log('Clearing transcript and resetting chat session.', 'INFO');
             setTranscript([]);
-            localStorage.removeItem('transcript');
+            try {
+              localStorage.removeItem('transcript');
+            } catch(e) {
+              log('Failed to clear transcript from localStorage', 'ERROR');
+            }
             chatRef.current = null;
             setIsSettingsModalOpen(false);
         }}
         copyButtonText={copyButtonText}
+        customApiKey={customApiKey}
+        onCustomApiKeyChange={handleCustomApiKeyChange}
+        log={log}
         />
     </div>
   );
