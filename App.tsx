@@ -222,6 +222,9 @@ const transcriptToHistory = (transcript: Transcript[]): Content[] => {
 };
 
 export const App: React.FC = () => {
+  const SESSION_MAX_DURATION = 4.5 * 60 * 1000; // 4.5 minutes
+  const sessionStartTimeRef = useRef<number>(0);
+  
   const [transcript, setTranscript] = useState<Transcript[]>(() => {
     try {
         const stored = localStorage.getItem('transcript');
@@ -274,6 +277,7 @@ export const App: React.FC = () => {
 
   const [textInputValue, setTextInputValue] = useState('');
   const [copyButtonText, setCopyButtonText] = useState('');
+  const [sessionTimeLeft, setSessionTimeLeft] = useState<number>(0);
 
   const outputAudioContextRef = useRef<AudioContext | null>(null);
   const nextStartTimeRef = useRef(0);
@@ -297,6 +301,64 @@ export const App: React.FC = () => {
         setLogs(prev => [...prev.slice(-100), fullMessage]);
     }
   }, [isDevMode]);
+
+  const shouldReconnect = useCallback(() => {
+    if (sessionStartTimeRef.current === 0) return false;
+    const elapsed = Date.now() - sessionStartTimeRef.current;
+    return elapsed >= SESSION_MAX_DURATION;
+  }, []);
+
+  const { status, startSession, stopSession, isSessionActive, setStatus, sendTextMessage: sendLinguisticsMessage, linguisticsSession } = useLiveSession({
+    ai,
+    selectedAssistant,
+    selectedVoice,
+    userId: 'user-1', // TODO: Implement proper user identification
+    setTranscript,
+    transcript,
+    playAudio: playAudioWrapper,
+    stopPlayback,
+    log,
+    onResponseComplete: useCallback(() => {
+      if (shouldReconnect()) {
+        log('⏰ Session age ≥ 4.5 min, triggering auto-reconnect...', 'INFO');
+        setTimeout(() => {
+          if (status !== 'LISTENING' && status !== 'IDLE') {
+            log('Auto-reconnect skipped (Gemini speaking)', 'DEBUG');
+            return;
+          }
+          
+          log('🔄 Auto-reconnect: Refreshing session to prevent timeout...', 'INFO');
+          
+          stopSession(false).then(() => {
+            setTimeout(() => {
+              startSession().then(() => {
+                sessionStartTimeRef.current = Date.now();
+                log('✅ Auto-reconnect: New session started', 'INFO');
+              });
+            }, 300);
+          });
+        }, 1000);
+      }
+    }, [shouldReconnect, status, stopSession, startSession, log]),
+  });
+
+  const patchedStartSession = useCallback(async () => {
+    sessionStartTimeRef.current = Date.now();
+    log('Session timer initialized', 'INFO');
+    await startSession();
+  }, [startSession, log]);
+
+  useEffect(() => {
+    if (!isSessionActive) return;
+    
+    const interval = setInterval(() => {
+      const elapsed = Date.now() - sessionStartTimeRef.current;
+      const left = Math.max(0, SESSION_MAX_DURATION - elapsed);
+      setSessionTimeLeft(Math.floor(left / 1000));
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }, [isSessionActive]);
   
   const handleCustomApiKeyChange = useCallback((key: string) => {
     try {
@@ -347,18 +409,6 @@ export const App: React.FC = () => {
     log("playAudio callback not yet initialized");
     return Promise.resolve();
   }, [log]);
-
-  const { status, startSession, stopSession, isSessionActive, setStatus, sendTextMessage: sendLinguisticsMessage, linguisticsSession } = useLiveSession({
-    ai,
-    selectedAssistant,
-    selectedVoice,
-    userId: 'user-1', // TODO: Implement proper user identification
-    setTranscript,
-    transcript,
-    playAudio: playAudioWrapper,
-    stopPlayback,
-    log
-  });
   
   const playAudio = useCallback(async (base64Audio: string) => {
     if (!outputAudioContextRef.current || outputAudioContextRef.current.state === 'closed') {
@@ -724,7 +774,7 @@ export const App: React.FC = () => {
       stopPlayback();
       setStatus('LISTENING');
     } else if (status === 'IDLE' || status === 'ERROR') {
-      startSession();
+      patchedStartSession();
     } else {
       stopSession(false);
     }
@@ -875,7 +925,7 @@ export const App: React.FC = () => {
               {transcript.length === 0 && (status === 'IDLE' || status === 'ERROR') && (
               <div className="flex-1 flex flex-col items-center justify-center text-center text-gray-400">
                   <p className="mb-4">{t.startMessage}</p>
-                  <button onClick={startSession} className="bg-green-600 text-white p-6 rounded-full hover:bg-green-700 transition-transform transform hover:scale-105 shadow-lg">
+                  <button onClick={patchedStartSession} className="bg-green-600 text-white p-6 rounded-full hover:bg-green-700 transition-transform transform hover:scale-105 shadow-lg">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
                   </button>
               </div>
@@ -935,9 +985,14 @@ export const App: React.FC = () => {
                   />
                 )}
              </div>
-          </div>
+             {isSessionActive && isDevMode && (
+               <div className="text-xs text-gray-400 mt-2">
+                 Session refresh in: {Math.floor(sessionTimeLeft / 60)}:{(sessionTimeLeft % 60).toString().padStart(2, '0')}
+               </div>
+             )}
+             </div>
 
-          <div className="mt-4 pt-4 border-t border-gray-700 flex items-center space-x-2">
+             <div className="mt-4 pt-4 border-t border-gray-700 flex items-center space-x-2">
             <input 
               type="text" 
               value={textInputValue}
