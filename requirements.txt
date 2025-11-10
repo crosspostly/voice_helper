@@ -16,7 +16,7 @@ sentence-transformers>=2.2.2
 tiktoken>=0.5.2
 
 # Database and storage
-sqlite3
+# sqlite3 is part of Python standard library
 
 # HTTP and async
 httpx>=0.25.2
