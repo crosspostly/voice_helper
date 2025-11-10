@@ -8,7 +8,6 @@ import { useAutoReconnectTimer } from './useAutoReconnectTimer';
 import { useTranscript } from './useTranscript';
 import { useLogger } from './useLogger';
 import { useAudioEngine } from './useAudioEngine';
-import { useLinguisticsSession } from './useLinguisticsSession';
 import { useLanguageManager } from './useLanguageManager';
 import { useWakeLock } from './useWakeLock';
 
@@ -44,7 +43,6 @@ interface UseSessionManagerReturn {
   transcript: ReturnType<typeof useTranscript>;
   audioEngine: ReturnType<typeof useAudioEngine>;
   logger: ReturnType<typeof useLogger>;
-  linguisticsSession: ReturnType<typeof useLinguisticsSession>;
   languageManager: ReturnType<typeof useLanguageManager>;
   wakeLock: {
     isActive: boolean;
@@ -115,8 +113,7 @@ export function useSessionManager(options: UseSessionManagerOptions = {}): UseSe
     stopSession, 
     isSessionActive, 
     setStatus,
-    sendTextMessage: sendLinguisticsMessage,
-    linguisticsSession
+    sendTextMessage,
   } = useLiveSession({
     ai,
     selectedAssistant: selectedAssistant || { id: '', prompt: '' },
@@ -130,10 +127,10 @@ export function useSessionManager(options: UseSessionManagerOptions = {}): UseSe
     onResponseComplete: useCallback(() => {
       if (timer.shouldReconnect()) {
         logger.log('⏰ Session age ≥ 4.5 min, triggering auto-reconnect...', 'INFO');
-        // Will be defined below - use setTimeout to avoid circular dependency
+        // Trigger auto-reconnect
         setTimeout(() => triggerAutoReconnect(), 0);
       }
-    }, [timer.shouldReconnect, logger]),
+    }, [timer]),
   });
 
   // Auto-reconnect logic
@@ -171,8 +168,8 @@ export function useSessionManager(options: UseSessionManagerOptions = {}): UseSe
       await requestWakeLock();
       
       if (assistant.isLinguisticsService) {
-        // Use linguistics session
-        logger.log('Starting linguistics session', 'INFO');
+        // Use linguistics session - for now just log it
+        logger.log('Linguistics service was requested but is removed', 'WARN');
       }
       
       await startSession();
@@ -219,9 +216,12 @@ export function useSessionManager(options: UseSessionManagerOptions = {}): UseSe
   const sendText = useCallback(async (text: string) => {
     try {
       if (selectedAssistant?.isLinguisticsService) {
-        await sendLinguisticsMessage(text);
+        // Linguistics was removed in hotfix #18
+        logger.log('Linguistics service removed - falling back to regular session', 'WARN');
+        transcript.addMessage('You', text);
       } else {
         // Regular Gemini session - text would be handled by live session
+        await sendTextMessage(text);
         transcript.addMessage('You', text);
         logger.log(`Text sent: ${text}`, 'DEBUG');
       }
@@ -229,7 +229,7 @@ export function useSessionManager(options: UseSessionManagerOptions = {}): UseSe
       logger.log(`Failed to send text: ${error}`, 'ERROR');
       setErrorState('Failed to send message');
     }
-  }, [selectedAssistant, sendLinguisticsMessage, transcript, logger]);
+  }, [selectedAssistant, sendTextMessage, transcript, logger]);
 
   const sendStructuredMessage = useCallback(async (message: any) => {
     try {
@@ -267,7 +267,6 @@ export function useSessionManager(options: UseSessionManagerOptions = {}): UseSe
     transcript,
     audioEngine,
     logger,
-    linguisticsSession,
     languageManager,
     wakeLock: {
       isActive: isWakeLockActive,
