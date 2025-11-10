@@ -4,6 +4,18 @@ module.exports = {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
+  safelist: [
+    'bg-base',
+    'bg-grapefruit',
+    'bg-grapefruitDark',
+    'bg-accent',
+    'bg-accent2',
+    'bg-card',
+    'text-text',
+    'border-border',
+    'rounded-card',
+    'shadow-card',
+  ],
   theme: {
     extend: {
       colors: {
