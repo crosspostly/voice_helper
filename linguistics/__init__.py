@@ -5,7 +5,6 @@ This package provides database, RAG (Retrieval-Augmented Generation),
 memory management, personas, and voice processing capabilities.
 """
 
-# Skip coordinator import for setup script to avoid dependency issues
 try:
     from .coordinator import LinguisticsCoordinator, get_coordinator, reset_coordinator
     _coordinator_available = True

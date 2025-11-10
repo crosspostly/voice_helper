@@ -4,7 +4,6 @@ RAG (Retrieval-Augmented Generation) module for linguistics package.
 Provides retrieval capabilities to enhance AI responses with relevant
 context from stored knowledge bases and documents.
 """
-
 # Skip retriever import for setup script to avoid dependency issues
 try:
     from .retriever import (
