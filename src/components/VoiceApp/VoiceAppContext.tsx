@@ -1,6 +1,7 @@
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { createContext, useContext, ReactNode, useEffect } from 'react';
 import { useSessionManager } from '../../hooks/useSessionManager';
 import { Assistant } from '../../types';
+import { PersonaService } from '../../services/personaService';
 
 // Context interfaces
 interface VoiceAppContextType {
@@ -115,6 +116,9 @@ export const VoiceAppProvider: React.FC<VoiceAppProviderProps> = ({
     defaultApiKey,
   });
 
+  // Persona service
+  const personaService = React.useMemo(() => new PersonaService(), []);
+
   // Additional UI state (simplified for this example)
   const [customAssistants, setCustomAssistants] = React.useState<Assistant[]>([]);
   const [customApiKeyState, setCustomApiKeyState] = React.useState<string>('');
@@ -127,6 +131,30 @@ export const VoiceAppProvider: React.FC<VoiceAppProviderProps> = ({
   const [copyButtonText, setCopyButtonText] = React.useState('');
   const [personaView, setPersonaView] = React.useState<'select' | 'edit' | 'add'>('select');
   const [editingPersona, setEditingPersona] = React.useState<any>(null);
+
+  // Initialize assistants and selected assistant on mount
+  useEffect(() => {
+    const allAssistants = personaService.getAllAssistants();
+    setCustomAssistants(allAssistants);
+
+    // Load or set default selected assistant
+    const savedAssistantId = personaService.loadSelectedAssistantId();
+    let selectedAssistant = savedAssistantId 
+      ? personaService.getAssistantById(savedAssistantId)
+      : null;
+    
+    // If no saved assistant or saved one not found, use first preset
+    if (!selectedAssistant && allAssistants.length > 0) {
+      selectedAssistant = allAssistants[0];
+      if (selectedAssistant.id) {
+        personaService.saveSelectedAssistantId(selectedAssistant.id);
+      }
+    }
+
+    if (selectedAssistant) {
+      sessionManager.setSelectedAssistant(selectedAssistant);
+    }
+  }, [personaService, sessionManager]);
 
   // Context value
   const contextValue: VoiceAppContextType = {
