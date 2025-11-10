@@ -1,15 +1,16 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { GoogleGenAI, Chat, Modality, Content } from '@google/genai';
-import { Transcript, Assistant } from './types';
-import { decode, decodeAudioData } from './services/audioUtils';
-import { useLiveSession, Status } from './hooks/useLiveSession';
-import { StatusIndicator } from './components/StatusIndicator';
-import { ProgressCard } from './components/ProgressCard';
-import { ServiceStatusIndicator } from './components/ServiceStatusIndicator';
-import { SettingsModal } from './components/SettingsModal';
-import { PersonaInfoModal } from './components/PersonaInfoModal';
+import { Transcript, Assistant } from '@/types';
+import { decode, decodeAudioData } from '@/services/audioUtils';
+import { useLiveSession, Status } from '@/hooks/useLiveSession';
+import { StatusIndicator } from '@/components/StatusIndicator';
+import { ProgressCard } from '@/components/ProgressCard';
+import { ServiceStatusIndicator } from '@/components/ServiceStatusIndicator';
+import { SettingsModal } from '@/components/SettingsModal';
+import { PersonaInfoModal } from '@/components/PersonaInfoModal';
+import { getLocaleStrings, SupportedLocale } from '@/i18n';
 
-type Language = 'en' | 'ru';
+type Language = SupportedLocale;
 type PersonaView = 'select' | 'edit' | 'add';
 
 // Default API key (restricted to project domain for security)
@@ -51,83 +52,41 @@ const PRESET_ASSISTANTS: Omit<Assistant, 'id'>[] = [
 
 const VOICES = ['Zephyr', 'Puck', 'Charon', 'Kore', 'Fenrir'];
 
-const I18N: Record<Language, Record<string, string>> = {
-  en: {
-    title: "Live Voice Assistant",
-    accessGrok: "Access Grok",
-    personaTitle: "Assistant Persona",
-    selectPersona: "Select a Persona",
-    voiceSelection: "Voice",
-    speechRate: "Speech Rate",
-    speechPitch: "Speech Pitch",
-    saveConversation: "Save Conversation",
-    copyText: "Copy Text",
-    saveAsPdf: "Save as PDF",
-    copied: "Copied!",
-    startMessage: "Press the mic to begin conversation.",
-    speakNow: "Speak Now",
-    you: "You",
-    gemini: "Gemini",
-    sendMessage: "Send Message",
-    updateSettings: "Update Settings",
-    status_IDLE: "Ready",
-    status_CONNECTING: "Connecting...",
-    status_LISTENING: "Listening...",
-    status_SPEAKING: "Gemini Speaking...",
-    status_PROCESSING: "Processing...",
-    status_RECONNECTING: "Reconnecting...",
-    status_ERROR: "Error",
-    advancedSettings: "Advanced Settings",
-    adultMode: "Unfiltered 18+ Mode",
-    adultModeDesc: "Enables deeper, more candid conversations.",
-    devMode: "Developer Mode",
-    devModeDesc: "Enables verbose logging for debugging.",
-    customApiKey: "Custom Gemini API Key",
-    customApiKeyPlaceholder: "Enter your Gemini API Key",
-    customApiKeyDesc: "If empty, a default key will be used.",
-    editCurrentPersona: "Edit Current Persona",
-    addNewPersona: "Add New Persona",
-    titlePlaceholder: "Persona Title",
-    promptPlaceholder: "Persona Prompt (e.g., You are a helpful assistant)",
-    promptPlaceholderWithNote: "Persona Prompt (must be in English for the AI)",
-    presetPromptReadOnly: "Preset prompts are shown for reference and cannot be edited. Saving will create a new custom persona based on this one.",
-    saveChanges: "Save Changes",
-    deletePersona: "Delete",
-    deleteConfirm: "Are you sure you want to delete this persona? This cannot be undone.",
-    save: "Save",
-    createNewPersona: "Create New Persona...",
-    editPersona: "Edit",
-    cancel: "Cancel",
-    importSettings: "Import Settings",
-    exportSettings: "Export Settings",
-    importSuccess: "Settings imported successfully!",
-    importError: "Failed to import settings. The file may be invalid.",
-    startConversation: "Start Conversation",
-    logs: "Logs",
-    clearLogs: "Clear",
-    loadMore: "Load More",
-    clearTranscript: "Clear Transcript",
-    resetToDefault: "Reset to Default",
-    resetKeySuccess: "API Key has been reset to default.",
-    apiKeyError: "Gemini AI could not be initialized. Please check your API key in the settings.",
-    // Persona Titles
-    persona_helpful: "Helpful Assistant",
-    persona_companion: "Patient Companion",
-    persona_negotiator: "Expert Negotiator (by 'Linguistics' book)",
-    persona_linguistics: "Linguistics Assistant (Structured Learning)",
-    persona_therapist: "Therapist",
-    persona_romantic: "Romantic Partner",
-    persona_robot: "Sarcastic Robot",
-    persona_poet: "Shakespearean Poet",
-    persona_writer: "Creative Writer",
-    persona_socratic: "Socratic Tutor",
-    persona_debate: "Debate Champion",
-    persona_eloquence: "Master of Eloquent Expression",
-    persona_emdr_therapist: "Psychotherapist (EMDR Protocol)",
-  },
-  ru: {
-    title: "Голосовой Ассистент",
-    accessGrok: "Открыть Grok",
+const getPersonaDisplayName = (assistant: Assistant, t: Record<string, string>) => {
+    return assistant.title || (assistant.titleKey ? t[assistant.titleKey] : assistant.id);
+};
+
+const getPersonaDisplayPrompt = (assistant: Assistant, lang: Language) => {
+    if (lang === 'ru' && assistant.id.startsWith('preset-')) {
+        const promptKey = `prompt_${assistant.titleKey}`;
+        const ruStrings = getLocaleStrings('ru');
+        return ruStrings[promptKey as keyof typeof ruStrings] || assistant.prompt;
+    }
+    return assistant.prompt;
+};
+
+const transcriptToHistory = (transcript: Transcript[]): Content[] => {
+    return transcript
+        .filter(entry => entry.text.trim() !== '') // Ensure we don't send empty messages
+        .map(entry => ({
+            role: entry.speaker === 'You' ? 'user' : 'model',
+            parts: [{ text: entry.text }],
+        }));
+};
+
+export const App: React.FC = () => {
+  const SESSION_MAX_DURATION = 4.5 * 60 * 1000; // 4.5 minutes
+  const sessionStartTimeRef = useRef<number>(0);
+
+  const [transcript, setTranscript] = useState<Transcript[]>(() => {
+    try {
+        const stored = localStorage.getItem('transcript');
+        return stored ? JSON.parse(stored) : [];
+    } catch (e) {
+        console.error("Failed to load transcript from localStorage", e);
+        return [];
+    }
+  });
     personaTitle: "Персона Ассистента",
     selectPersona: "Выберите Персону",
     voiceSelection: "Голос",
@@ -207,7 +166,8 @@ const getPersonaDisplayName = (assistant: Assistant, t: Record<string, string>) 
 const getPersonaDisplayPrompt = (assistant: Assistant, lang: Language) => {
     if (lang === 'ru' && assistant.id.startsWith('preset-')) {
         const promptKey = `prompt_${assistant.titleKey}`;
-        return I18N.ru[promptKey] || assistant.prompt;
+        const ruStrings = getLocaleStrings('ru');
+        return ruStrings[promptKey as keyof typeof ruStrings] || assistant.prompt;
     }
     return assistant.prompt;
 };
@@ -287,7 +247,7 @@ export const App: React.FC = () => {
   const playAudioRef = useRef<((base64Audio: string) => Promise<void>) | null>(null);
   
   const ai = useGemini(customApiKey);
-  const t = I18N[lang];
+  const t = getLocaleStrings(lang);
 
   const log = useCallback((message: string, level: 'INFO' | 'ERROR' | 'DEBUG' = 'DEBUG') => {
     const fullMessage = `[${new Date().toLocaleTimeString()}] ${message}`;
