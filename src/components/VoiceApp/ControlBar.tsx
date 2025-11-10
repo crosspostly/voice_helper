@@ -5,12 +5,12 @@ import { StatusIndicator } from '../../components/StatusIndicator';
 import { LogPanel } from './Common/LogPanel';
 
 export const ControlBar: React.FC = () => {
-  const { session, ui, language } = useVoiceAppContext();
+  const { session, audio, ui, language } = useVoiceAppContext();
   const { strings: t } = language;
 
   const handleMicButtonClick = () => {
     if (session.status === 'SPEAKING') {
-      session.audio.stopAll();
+      audio.stopAll();
     } else if (session.status === 'IDLE' || session.status === 'ERROR') {
       session.start(session.selectedAssistant!);
     } else {
