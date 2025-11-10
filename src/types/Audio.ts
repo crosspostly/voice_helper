@@ -21,3 +21,14 @@ export interface AudioConfig {
   bitDepth: number;
   bufferSize: number;
 }
+
+export interface WakeLockState {
+  isActive: boolean;
+  supportedScreenWakeLock: boolean;
+  supportedSilentAudio: boolean;
+}
+
+export interface SessionAudioConfig {
+  enableWakeLock: boolean;
+  enableSilentAudioFallback: boolean;
+}
