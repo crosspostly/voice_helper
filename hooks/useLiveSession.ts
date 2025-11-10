@@ -16,6 +16,7 @@ interface UseLiveSessionProps {
   playAudio: (base64Audio: string) => Promise<void>;
   stopPlayback: () => void;
   log: (message: string, level?: 'INFO' | 'ERROR' | 'DEBUG') => void;
+  onResponseComplete?: () => void;
 }
 
 const TURN_TAKING_INSTRUCTION = "Crucial rule: Your primary function is to be an active listener. Never interrupt the user while they are speaking. Wait for a clear pause in their speech before you begin to respond. Your responses should be timely but not rushed.";
@@ -30,6 +31,7 @@ export const useLiveSession = ({
   playAudio,
   stopPlayback,
   log,
+  onResponseComplete,
 }: UseLiveSessionProps) => {
   const [status, setStatus] = useState<Status>('IDLE');
   const [isSessionActive, setIsSessionActive] = useState(false);
@@ -339,6 +341,9 @@ export const useLiveSession = ({
                   .filter(entry => entry.text.trim() !== '') 
                   .map(entry => ({ ...entry, isFinal: true }))
               );
+              if (onResponseComplete) {
+                onResponseComplete();
+              }
           }
         },
         onerror: async (e: ErrorEvent) => {
@@ -417,7 +422,7 @@ export const useLiveSession = ({
       setStatus('ERROR');
       setIsSessionActive(false);
     }
-  }, [ai, status, selectedAssistant, stopSession, playAudio, stopPlayback, selectedVoice, log, setTranscript, transcript]);
+  }, [ai, status, selectedAssistant, stopSession, playAudio, stopPlayback, selectedVoice, log, setTranscript, transcript, onResponseComplete]);
 
   useEffect(() => {
     return () => {
