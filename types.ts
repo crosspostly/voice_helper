@@ -1,7 +1,25 @@
 export interface Transcript {
-  speaker: 'You' | 'Gemini';
+  speaker: 'You' | 'Gemini' | 'Linguistics';
   text: string;
   isFinal?: boolean;
+  metadata?: {
+    response_type?: 'structured';
+    exercises?: Array<{
+      title: string;
+      description: string;
+      difficulty: 'beginner' | 'intermediate' | 'advanced';
+    }>;
+    progress_updates?: Array<{
+      category: string;
+      level: number;
+      description: string;
+    }>;
+    context_used?: boolean;
+    persona?: {
+      id: string;
+      name: string;
+    };
+  };
 }
 
 export interface Assistant {
@@ -9,6 +27,7 @@ export interface Assistant {
   title?: string; // For custom personas
   titleKey?: string; // For preset personas
   prompt: string;
+  isLinguisticsService?: boolean; // Flag for linguistics service routing
 }
 
 // --- Globals for browser APIs ---
