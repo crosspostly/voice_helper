@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { GoogleGenAI } from '@google/genai';
 import { Assistant, Transcript } from '../types';
 import { TranscriptService } from '../services/transcriptService';
@@ -8,7 +8,9 @@ import { useAutoReconnectTimer } from './useAutoReconnectTimer';
 import { useTranscript } from './useTranscript';
 import { useLogger } from './useLogger';
 import { useAudioEngine } from './useAudioEngine';
+import { useLinguisticsSession } from './useLinguisticsSession';
 import { useLanguageManager } from './useLanguageManager';
+import { useWakeLock } from './useWakeLock';
 
 interface UseSessionManagerOptions {
   customApiKey?: string | null;
@@ -42,7 +44,11 @@ interface UseSessionManagerReturn {
   transcript: ReturnType<typeof useTranscript>;
   audioEngine: ReturnType<typeof useAudioEngine>;
   logger: ReturnType<typeof useLogger>;
+  linguisticsSession: ReturnType<typeof useLinguisticsSession>;
   languageManager: ReturnType<typeof useLanguageManager>;
+  wakeLock: {
+    isActive: boolean;
+  };
 }
 
 /**
@@ -61,6 +67,7 @@ export function useSessionManager(options: UseSessionManagerOptions = {}): UseSe
   const audioEngine = useAudioEngine();
   const timer = useAutoReconnectTimer();
   const languageManager = useLanguageManager();
+  const { requestWakeLock, releaseWakeLock, isActive: isWakeLockActive } = useWakeLock();
   
   // State
   const [selectedAssistant, setSelectedAssistant] = useState<Assistant | null>(null);
@@ -72,16 +79,14 @@ export function useSessionManager(options: UseSessionManagerOptions = {}): UseSe
   const geminiService = useMemo(() => {
     const apiKey = customApiKey || defaultApiKey;
     if (!apiKey) {
-      logger.log('No API key provided for Gemini service', 'ERROR');
       return null;
     }
     try {
       return GeminiService.create(apiKey);
     } catch (error) {
-      logger.log(`Failed to create Gemini service: ${error}`, 'ERROR');
       return null;
     }
-  }, [customApiKey, defaultApiKey, logger]);
+  }, [customApiKey, defaultApiKey]);
 
   const ai = useMemo(() => {
     const apiKey = customApiKey || defaultApiKey;
@@ -91,8 +96,15 @@ export function useSessionManager(options: UseSessionManagerOptions = {}): UseSe
     try {
       return new GoogleGenAI({ apiKey });
     } catch (error) {
-      logger.log(`Failed to initialize GoogleGenAI: ${error}`, 'ERROR');
       return null;
+    }
+  }, [customApiKey, defaultApiKey]);
+
+  // Log errors in useEffect instead of useMemo to prevent re-renders
+  useEffect(() => {
+    const apiKey = customApiKey || defaultApiKey;
+    if (!apiKey) {
+      logger.log('No API key provided for Gemini service', 'ERROR');
     }
   }, [customApiKey, defaultApiKey, logger]);
 
@@ -103,7 +115,8 @@ export function useSessionManager(options: UseSessionManagerOptions = {}): UseSe
     stopSession, 
     isSessionActive, 
     setStatus,
-    sendTextMessage: sendLinguisticsMessage
+    sendTextMessage: sendLinguisticsMessage,
+    linguisticsSession
   } = useLiveSession({
     ai,
     selectedAssistant: selectedAssistant || { id: '', prompt: '' },
@@ -117,7 +130,8 @@ export function useSessionManager(options: UseSessionManagerOptions = {}): UseSe
     onResponseComplete: useCallback(() => {
       if (timer.shouldReconnect()) {
         logger.log('⏰ Session age ≥ 4.5 min, triggering auto-reconnect...', 'INFO');
-        triggerAutoReconnect();
+        // Will be defined below - use setTimeout to avoid circular dependency
+        setTimeout(() => triggerAutoReconnect(), 0);
       }
     }, [timer.shouldReconnect, logger]),
   });
@@ -153,26 +167,41 @@ export function useSessionManager(options: UseSessionManagerOptions = {}): UseSe
       setSelectedAssistant(assistant);
       timer.startTimer();
       
+      // Activate Wake Lock before starting audio session
+      await requestWakeLock();
+      
+      if (assistant.isLinguisticsService) {
+        // Use linguistics session
+        logger.log('Starting linguistics session', 'INFO');
+      }
+      
       await startSession();
-      logger.log('Session started successfully', 'INFO');
+      logger.log('Session started with Wake Lock active', 'INFO');
     } catch (error) {
       logger.log(`Failed to start session: ${error}`, 'ERROR');
       setErrorState('Failed to start session');
       timer.stopTimer();
+      await releaseWakeLock(); // Cleanup if startup fails
     }
-  }, [startSession, timer, logger]);
+  }, [startSession, timer, logger, requestWakeLock, releaseWakeLock]);
 
   const stop = useCallback(async () => {
     try {
       setErrorState(null);
       await stopSession();
       timer.stopTimer();
-      logger.log('Session stopped successfully', 'INFO');
+      
+      // Release Wake Lock after session ends
+      await releaseWakeLock();
+      
+      logger.log('Session stopped, Wake Lock released', 'INFO');
     } catch (error) {
-      logger.log(`Failed to stop session: ${error}`, 'ERROR');
+      logger.log(`Error stopping session: ${error}`, 'ERROR');
       setErrorState('Failed to stop session');
+      // Attempt cleanup anyway
+      await releaseWakeLock();
     }
-  }, [stopSession, timer, logger]);
+  }, [stopSession, timer, logger, releaseWakeLock]);
 
   const restart = useCallback(async () => {
     if (!selectedAssistant) {
@@ -189,14 +218,18 @@ export function useSessionManager(options: UseSessionManagerOptions = {}): UseSe
   // Communication actions
   const sendText = useCallback(async (text: string) => {
     try {
-      // Regular Gemini session - text would be handled by live session
-      transcript.addMessage('You', text);
-      logger.log(`Text sent: ${text}`, 'DEBUG');
+      if (selectedAssistant?.isLinguisticsService) {
+        await sendLinguisticsMessage(text);
+      } else {
+        // Regular Gemini session - text would be handled by live session
+        transcript.addMessage('You', text);
+        logger.log(`Text sent: ${text}`, 'DEBUG');
+      }
     } catch (error) {
       logger.log(`Failed to send text: ${error}`, 'ERROR');
       setErrorState('Failed to send message');
     }
-  }, [transcript, logger]);
+  }, [selectedAssistant, sendLinguisticsMessage, transcript, logger]);
 
   const sendStructuredMessage = useCallback(async (message: any) => {
     try {
@@ -234,6 +267,10 @@ export function useSessionManager(options: UseSessionManagerOptions = {}): UseSe
     transcript,
     audioEngine,
     logger,
+    linguisticsSession,
     languageManager,
+    wakeLock: {
+      isActive: isWakeLockActive,
+    },
   };
 }
