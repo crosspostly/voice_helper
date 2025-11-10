@@ -18,7 +18,13 @@ from chromadb.config import Settings
 from chromadb.utils import embedding_functions
 
 from ..config import config
-from .embeddings import EmbeddingService, get_embedding_service
+try:
+    from .embeddings import EmbeddingService, get_embedding_service
+    _embeddings_available = True
+except ImportError:
+    _embeddings_available = False
+    EmbeddingService = None
+    get_embedding_service = None
 from .schema import Collections, validate_collection_metadata
 
 logger = logging.getLogger(__name__)
@@ -58,11 +64,18 @@ class LinguisticsDB:
         
         Args:
             persist_directory: Directory for persistent storage. If None, uses config.CHROMA_DB_PATH
-            embedding_service: Custom embedding service. If None, uses default Gemini service
+            embedding_service: Custom embedding service. If None, uses default service
             reset_db: If True, resets the database by deleting and recreating the persist directory
         """
         self.persist_directory = Path(persist_directory or config.CHROMA_DB_PATH)
-        self.embedding_service = embedding_service or get_embedding_service()
+        
+        # Handle missing embedding service
+        if _embeddings_available:
+            self.embedding_service = embedding_service or get_embedding_service()
+        else:
+            self.embedding_service = None
+            logger.warning("Embedding service not available - using fallback embedding function")
+        
         self._client = None
         self._collections = {}
         self._embedding_function = None
@@ -104,10 +117,14 @@ class LinguisticsDB:
     
     def _setup_embedding_function(self) -> None:
         """Setup the embedding function based on available services."""
-        if self.embedding_service.is_available():
+        if self.embedding_service and hasattr(self.embedding_service, 'is_available') and self.embedding_service.is_available():
             # Use custom embedding function that wraps Gemini
-            self._embedding_function = GeminiEmbeddingFunction(self.embedding_service)
-            logger.info("Using Gemini embedding function")
+            try:
+                self._embedding_function = GeminiEmbeddingFunction(self.embedding_service)
+                logger.info("Using Gemini embedding function")
+            except Exception as e:
+                logger.warning(f"Failed to setup Gemini embedding function: {e}")
+                self._embedding_function = None
         else:
             # Fallback to a simple sentence transformer embedding
             try:
