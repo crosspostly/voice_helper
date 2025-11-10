@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect, Dispatch, SetStateAction } fr
 import { GoogleGenAI, LiveServerMessage, Modality } from '@google/genai';
 import { createBlob } from '../services/audioUtils';
 import { Assistant, Transcript } from '../types';
+import { useLinguisticsSession } from './useLinguisticsSession';
 
 export type Status = 'IDLE' | 'CONNECTING' | 'LISTENING' | 'SPEAKING' | 'ERROR' | 'PROCESSING' | 'RECONNECTING';
 
@@ -9,6 +10,7 @@ interface UseLiveSessionProps {
   ai: GoogleGenAI | null;
   selectedAssistant: Assistant;
   selectedVoice: string;
+  userId: string;
   setTranscript: Dispatch<SetStateAction<Transcript[]>>;
   transcript: Transcript[];
   playAudio: (base64Audio: string) => Promise<void>;
@@ -22,6 +24,7 @@ export const useLiveSession = ({
   ai,
   selectedAssistant,
   selectedVoice,
+  userId,
   setTranscript,
   transcript,
   playAudio,
@@ -39,6 +42,15 @@ export const useLiveSession = ({
   const keepAliveIntervalRef = useRef<number | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const isSessionActiveRef = useRef(false);
+
+  // Linguistics session integration
+  const linguisticsSession = useLinguisticsSession({
+    selectedAssistant,
+    userId,
+    setTranscript,
+    playAudio,
+    log,
+  });
 
   // Fix: Synchronize the state with a ref. The state (`isSessionActive`) triggers
   // re-renders in the consuming component, ensuring callbacks are fresh. The ref
@@ -110,6 +122,24 @@ export const useLiveSession = ({
   const startSession = useCallback(async () => {
     if (status !== 'IDLE' && status !== 'ERROR' && status !== 'RECONNECTING') {
       log(`startSession called with invalid status: ${status}. Aborting.`, 'INFO');
+      return;
+    }
+
+    // Check if this is a linguistics assistant
+    if (linguisticsSession.isLinguisticsAssistant) {
+      log('Starting linguistics session instead of Gemini Live', 'INFO');
+      
+      // Stop any existing audio session
+      await stopSession();
+      
+      // Start linguistics session
+      const success = await linguisticsSession.startSession();
+      if (success) {
+        setStatus('PROCESSING'); // Use processing state for linguistics
+        setIsSessionActive(true);
+      } else {
+        setStatus('ERROR');
+      }
       return;
     }
 
@@ -398,5 +428,40 @@ export const useLiveSession = ({
     };
   }, [stopSession, log]);
 
-  return { status, startSession, stopSession, isSessionActive, setStatus };
+  // Function to handle text messages for linguistics assistants
+  const sendTextMessage = useCallback(async (text: string) => {
+    if (linguisticsSession.isLinguisticsAssistant) {
+      log(`Sending text message to linguistics service: ${text.substring(0, 50)}...`, 'INFO');
+      
+      // Add user message to transcript
+      setTranscript(prev => [...prev, {
+        speaker: 'You',
+        text,
+        isFinal: true,
+      }]);
+
+      // Process with linguistics service
+      const success = await linguisticsSession.processUtterance(text);
+      if (!success) {
+        log('Failed to process message with linguistics service', 'ERROR');
+        setStatus('ERROR');
+      }
+      return success;
+    }
+
+    // For non-linguistics assistants, we would need the regular Gemini text handling
+    // This is not implemented in the current hook as it focuses on audio
+    log('Text messaging not implemented for non-linguistics assistants', 'ERROR');
+    return false;
+  }, [linguisticsSession, setTranscript, log]);
+
+  return { 
+    status, 
+    startSession, 
+    stopSession, 
+    isSessionActive, 
+    setStatus,
+    sendTextMessage,
+    linguisticsSession,
+  };
 };

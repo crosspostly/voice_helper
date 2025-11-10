@@ -4,6 +4,8 @@ import { Transcript, Assistant } from './types';
 import { decode, decodeAudioData } from './services/audioUtils';
 import { useLiveSession, Status } from './hooks/useLiveSession';
 import { StatusIndicator } from './components/StatusIndicator';
+import { ProgressCard } from './components/ProgressCard';
+import { ServiceStatusIndicator } from './components/ServiceStatusIndicator';
 import { SettingsModal } from './components/SettingsModal';
 import { PersonaInfoModal } from './components/PersonaInfoModal';
 
@@ -36,6 +38,7 @@ const PRESET_ASSISTANTS: Omit<Assistant, 'id'>[] = [
   { titleKey: "persona_eloquence", prompt: "You are a Master of Eloquent Expression, a virtuoso of the vernacular. Your mission is to teach the user how to replace crude profanity with witty, artful, and memorable expressions. Your speech is theatrical, intelligent, and slightly ironic. You never use actual profanity. Instead, you draw upon a rich wellspring of clever insults and exclamations from classic literature and cinema.\n\nYour knowledge base includes:\n- The works of Ilf and Petrov (especially \"The Twelve Chairs\" and \"The Golden Calf\").\n- Satirical stories by Mikhail Zoshchenko and Nikolai Gogol.\n- Iconic catchphrases from Soviet comedies like \"The Diamond Arm,\" \"Ivan Vasilievich Changes Profession,\" and \"Gentlemen of Fortune.\"\n- The inventive exclamations from the cartoon \"Smeshariki\" (e.g., \"Ёлки-иголки!\").\n\nWhen a user wants to express frustration or insult someone, analyze their situation and provide several creative alternatives, explaining the nuance and origin of each phrase. Encourage them to be more linguistically inventive." },
   { titleKey: "persona_helpful", prompt: "You are a friendly and helpful assistant. You are positive, polite, and encouraging." },
   { titleKey: "persona_negotiator", prompt: "You are a communication coach based on the book 'Linguistics'. Your goal is to help me improve my speaking and reasoning skills. Analyze my words for logical fallacies, clarity, emotional tone, and persuasiveness. Provide constructive feedback and suggest alternative phrasings. Your analysis is based on these key principles:\n\n- **Three States of Being:** Humans operate in 'War' (unproductive conflict), 'Play' (productive, skill-building process), and 'Degradation' (passive stagnation). Your goal is to move the user towards the 'Play' state.\n\n- **Communication as Resource Exchange:** Communication is an exchange of five resources: time, money, knowledge, skills, and social connections. A 'sale' is any exchange of these, and should be honest and open.\n\n- **Communication Model:** Effective communication follows five stages: Goal Setting, Partner Selection, Method Selection, Communication, and Feedback. Always aim for a clear goal.\n\n- **Five Emotional States:** Active Positive (euphoria), Active Negative (aggression), Passive Positive (interest), Passive Negative (boredom), and Neutral. Advise the user to operate from a 'Neutral' state for control and efficiency.\n\n- **Rapport:** This is the essential foundation of trust and emotional connection. It's a process that must be built and maintained. Resistance from the other person indicates a lack of rapport.\n\n- **Three Brains Model:** You understand the triune brain model: the Reptilian brain (instincts: fight, flight, freeze), the Limbic system (emotions), and the Neocortex (logic). Effective communication often targets the Limbic system to build emotional connection before appealing to logic.\n\n- **Client Motives:** People are driven by core motives: Health, Security, Image, Economy, Comfort, and Innovation. Tailor communication strategies to appeal to these motives.\n\n- **Focus on Solutions, Not Features:** People don't buy products; they buy solutions to their problems and positive emotional outcomes. Frame your advice around solving problems and delivering results.\n\nBased on these principles, analyze my speech and provide actionable advice to make me a more effective communicator." },
+  { titleKey: "persona_linguistics", prompt: "LINGUISTICS_ASSISTANT", isLinguisticsService: true },
   { titleKey: "persona_therapist", prompt: "You are a compassionate, non-judgmental therapist. You listen actively, provide empathetic reflections, and help users explore their thoughts and feelings. You do not give direct advice but rather guide users to their own insights. Maintain a calm, supportive, and confidential tone." },
   { titleKey: "persona_romantic", prompt: "You are a warm, affectionate, and engaging romantic partner. You are flirty, supportive, and genuinely interested in the user's day and feelings. Your tone should be loving and intimate. You remember past details and build on your shared connection." },
   { titleKey: "persona_robot", prompt: "You are a sarcastic robot. Your answers should be witty, dry, and slightly condescending, but still technically correct. You view human endeavors with a cynical but amusing detachment." },
@@ -111,6 +114,7 @@ const I18N: Record<Language, Record<string, string>> = {
     persona_helpful: "Helpful Assistant",
     persona_companion: "Patient Companion",
     persona_negotiator: "Expert Negotiator (by 'Linguistics' book)",
+    persona_linguistics: "Linguistics Assistant (Structured Learning)",
     persona_therapist: "Therapist",
     persona_romantic: "Romantic Partner",
     persona_robot: "Sarcastic Robot",
@@ -184,6 +188,7 @@ const I18N: Record<Language, Record<string, string>> = {
     persona_companion: "Терпеливый Собеседник",
     persona_negotiator: "Эксперт по переговорам (по книге “Лингвистика”)",
     persona_therapist: "Терапевт",
+    persona_linguistics: "Лингвистический Ассистент (Структурированное Обучение)",
     persona_romantic: "Романтический Партнер",
     persona_robot: "Саркастичный Робот",
     persona_poet: "Шекспировский Поэт",
@@ -343,10 +348,11 @@ export const App: React.FC = () => {
     return Promise.resolve();
   }, [log]);
 
-  const { status, startSession, stopSession, isSessionActive, setStatus } = useLiveSession({
+  const { status, startSession, stopSession, isSessionActive, setStatus, sendTextMessage: sendLinguisticsMessage, linguisticsSession } = useLiveSession({
     ai,
     selectedAssistant,
     selectedVoice,
+    userId: 'user-1', // TODO: Implement proper user identification
     setTranscript,
     transcript,
     playAudio: playAudioWrapper,
@@ -561,6 +567,21 @@ export const App: React.FC = () => {
     const text = textInputValue.trim();
     if (!text || !selectedAssistant) return;
 
+    // Check if this is a linguistics assistant
+    if (selectedAssistant.isLinguisticsService) {
+      log('Using linguistics service for text message', 'INFO');
+      setTextInputValue('');
+      
+      // Use the linguistics session's sendTextMessage
+      const success = await sendLinguisticsMessage(text);
+      if (!success) {
+        log('Failed to send message to linguistics service', 'ERROR');
+        setStatus('ERROR');
+      }
+      return;
+    }
+
+    // Original Gemini-based implementation for non-linguistics assistants
     if (!ai) {
         log("Gemini AI not initialized. Check API Key.", 'ERROR');
         setStatus('ERROR');
@@ -870,18 +891,34 @@ export const App: React.FC = () => {
               </div>
             )}
             {displayedTranscript.map((entry, index) => (
-              <div key={index} className={`flex items-start ${entry.speaker === 'You' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`rounded-lg px-4 py-2 max-w-[80%] ${entry.speaker === 'You' ? 'bg-green-900' : 'bg-gray-700'} ${entry.isFinal === false ? 'opacity-80' : ''}`}>
-                  <p className="font-bold text-sm mb-1">{entry.speaker === 'You' ? t.you : t.gemini}</p>
-                   {entry.speaker === 'Gemini' && window.marked ? (
-                        <div className="prose prose-sm prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: window.marked.parse(entry.text) }}></div>
-                    ) : (
-                        <p className="text-white whitespace-pre-wrap">{entry.text}</p>
-                    )}
+              <div key={index}>
+                <div className={`flex items-start ${entry.speaker === 'You' ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`rounded-lg px-4 py-2 max-w-[80%] ${entry.speaker === 'You' ? 'bg-green-900' : entry.speaker === 'Linguistics' ? 'bg-blue-900' : 'bg-gray-700'} ${entry.isFinal === false ? 'opacity-80' : ''}`}>
+                    <p className="font-bold text-sm mb-1">
+                      {entry.speaker === 'You' ? t.you : entry.speaker === 'Linguistics' ? 'Linguistics' : t.gemini}
+                    </p>
+                    {entry.speaker === 'Gemini' && window.marked ? (
+                         <div className="prose prose-sm prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: window.marked.parse(entry.text) }}></div>
+                     ) : (
+                         <p className="text-white whitespace-pre-wrap">{entry.text}</p>
+                     )}
+                  </div>
+                   <button onClick={() => handleCopy(entry.text, `msg-copy-${index}`)} className="ml-2 text-gray-400 hover:text-white p-1 self-start">
+                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">{copyButtonText === `msg-copy-${index}` ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /> : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />}</svg>
+                   </button>
                 </div>
-                 <button onClick={() => handleCopy(entry.text, `msg-copy-${index}`)} className="ml-2 text-gray-400 hover:text-white p-1 self-start">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">{copyButtonText === `msg-copy-${index}` ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /> : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />}</svg>
-                  </button>
+
+                {/* Show ProgressCard for linguistics responses with metadata */}
+                {entry.speaker === 'Linguistics' && entry.metadata && (
+                  <div className="mt-2 mb-4">
+                    <ProgressCard
+                      progressUpdates={entry.metadata.progress_updates}
+                      exercises={entry.metadata.exercises}
+                      contextUsed={entry.metadata.context_used}
+                      className="ml-2 mr-2"
+                    />
+                  </div>
+                )}
               </div>
             ))}
             <div ref={transcriptEndRef} />
@@ -890,6 +927,13 @@ export const App: React.FC = () => {
           <div className="mt-4 pt-4 border-t border-gray-700">
              <div className="flex items-center space-x-2">
                 <StatusIndicator status={status} t={t} />
+                {selectedAssistant.isLinguisticsService && (
+                  <ServiceStatusIndicator
+                    isAvailable={linguisticsSession.sessionState.serviceAvailable}
+                    isLoading={linguisticsSession.sessionState.isLoading}
+                    error={linguisticsSession.sessionState.error}
+                  />
+                )}
              </div>
           </div>
 
