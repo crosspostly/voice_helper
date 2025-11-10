@@ -795,10 +795,18 @@ export const App: React.FC = () => {
         
         {(personaView === 'add' || personaView === 'edit') && editingPersona && (
           <div className="flex flex-col space-y-3 mt-4">
-              <input type="text" value={editingPersona.title || ''} onChange={(e) => setEditingPersona(p => ({ ...p, title: e.target.value }))} placeholder={t.titlePlaceholder} className="w-full bg-gray-700 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500" />
+              <input 
+                key="persona-title-input"
+                type="text" 
+                value={editingPersona.title || ''} 
+                onChange={(e) => setEditingPersona(p => ({ ...(p || {}), title: e.target.value }))} 
+                placeholder={t.titlePlaceholder} 
+                className="w-full bg-gray-700 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500" 
+              />
               <textarea
+                key="persona-prompt-textarea"
                 value={editingPersona.prompt || ''}
-                onChange={(e) => setEditingPersona(p => ({ ...p, prompt: e.target.value }))}
+                onChange={(e) => setEditingPersona(p => ({ ...(p || {}), prompt: e.target.value }))}
                 placeholder={t.promptPlaceholderWithNote}
                 className="w-full bg-gray-700 rounded-md px-3 py-2 h-40 resize-none focus:outline-none focus:ring-2 focus:ring-green-500"
               />
@@ -961,3 +969,5 @@ export const App: React.FC = () => {
     </div>
   );
 };
+
+export default App;

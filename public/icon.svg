@@ -1,28 +1,13 @@
-<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#6366f1;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:1" />
-    </linearGradient>
-    <linearGradient id="micGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#e0e7ff;stop-opacity:1" />
-    </linearGradient>
-  </defs>
-  <circle cx="256" cy="256" r="256" fill="url(#bgGradient)"/>
-  <path d="M 150 200 Q 150 230 150 260 Q 150 290 150 320" stroke="#a5b4fc" stroke-width="8" stroke-linecap="round" fill="none" opacity="0.6"/>
-  <path d="M 120 220 Q 120 240 120 260 Q 120 280 120 300" stroke="#a5b4fc" stroke-width="6" stroke-linecap="round" fill="none" opacity="0.4"/>
-  <path d="M 362 200 Q 362 230 362 260 Q 362 290 362 320" stroke="#a5b4fc" stroke-width="8" stroke-linecap="round" fill="none" opacity="0.6"/>
-  <path d="M 392 220 Q 392 240 392 260 Q 392 280 392 300" stroke="#a5b4fc" stroke-width="6" stroke-linecap="round" fill="none" opacity="0.4"/>
-  <rect x="226" y="180" width="60" height="90" rx="30" fill="url(#micGradient)"/>
-  <line x1="236" y1="195" x2="276" y2="195" stroke="#6366f1" stroke-width="2"/>
-  <line x1="236" y1="210" x2="276" y2="210" stroke="#6366f1" stroke-width="2"/>
-  <line x1="236" y1="225" x2="276" y2="225" stroke="#6366f1" stroke-width="2"/>
-  <line x1="236" y1="240" x2="276" y2="240" stroke="#6366f1" stroke-width="2"/>
-  <line x1="236" y1="255" x2="276" y2="255" stroke="#6366f1" stroke-width="2"/>
-  <path d="M 206 230 Q 206 270 206 270 Q 206 300 226 310" stroke="#ffffff" stroke-width="6" fill="none" stroke-linecap="round"/>
-  <path d="M 306 230 Q 306 270 306 270 Q 306 300 286 310" stroke="#ffffff" stroke-width="6" fill="none" stroke-linecap="round"/>
-  <line x1="256" y1="310" x2="256" y2="350" stroke="#ffffff" stroke-width="6" stroke-linecap="round"/>
-  <ellipse cx="256" cy="350" rx="40" ry="8" fill="#ffffff" opacity="0.8"/>
-  <circle cx="256" cy="160" r="6" fill="#ef4444"/>
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="256" cy="256" r="256" fill="#34d399"/>
+  <!-- Microphone element -->
+  <rect x="224" y="176" width="64" height="96" rx="32" fill="#ffffff"/>
+  <ellipse cx="256" cy="352" rx="40" ry="8" fill="#ffffff"/>
+  <!-- Coral accent dot -->
+  <circle cx="256" cy="160" r="12" fill="#fb7185"/>
+  <!-- Sound wave lines -->
+  <path d="M 208 208 Q 208 272 208 272 Q 208 304 224 312" stroke="#ffffff" stroke-width="8" fill="none" stroke-linecap="round"/>
+  <path d="M 304 208 Q 304 272 304 272 Q 304 304 288 312" stroke="#ffffff" stroke-width="8" fill="none" stroke-linecap="round"/>
+  <!-- Microphone cable -->
+  <line x1="256" y1="312" x2="256" y2="352" stroke="#ffffff" stroke-width="8" stroke-linecap="round"/>
 </svg>

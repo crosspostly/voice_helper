@@ -1,9 +1,13 @@
-<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-  <circle cx="16" cy="16" r="16" fill="#6366f1"/>
-  <rect x="14" y="11" width="4" height="6" rx="2" fill="#ffffff"/>
-  <path d="M 13 13 Q 13 17 13 17 Q 13 19 14 19.5" stroke="#ffffff" stroke-width="0.5" fill="none"/>
-  <path d="M 19 13 Q 19 17 19 17 Q 19 19 18 19.5" stroke="#ffffff" stroke-width="0.5" fill="none"/>
-  <line x1="16" y1="19.5" x2="16" y2="22" stroke="#ffffff" stroke-width="0.5"/>
-  <ellipse cx="16" cy="22" rx="2.5" ry="0.5" fill="#ffffff"/>
-  <circle cx="16" cy="10" r="0.5" fill="#ef4444"/>
+<svg width="32" height="32" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="256" cy="256" r="256" fill="#34d399"/>
+  <!-- Microphone element -->
+  <rect x="224" y="176" width="64" height="96" rx="32" fill="#ffffff"/>
+  <ellipse cx="256" cy="352" rx="40" ry="8" fill="#ffffff"/>
+  <!-- Coral accent dot -->
+  <circle cx="256" cy="160" r="12" fill="#fb7185"/>
+  <!-- Sound wave lines -->
+  <path d="M 208 208 Q 208 272 208 272 Q 208 304 224 312" stroke="#ffffff" stroke-width="8" fill="none" stroke-linecap="round"/>
+  <path d="M 304 208 Q 304 272 304 272 Q 304 304 288 312" stroke="#ffffff" stroke-width="8" fill="none" stroke-linecap="round"/>
+  <!-- Microphone cable -->
+  <line x1="256" y1="312" x2="256" y2="352" stroke="#ffffff" stroke-width="8" stroke-linecap="round"/>
 </svg>
