@@ -8,7 +8,6 @@ export interface AssistantConfig {
   title?: string; // For custom personas
   titleKey?: string; // For preset personas
   prompt: string;
-  isLinguisticsService?: boolean; // Flag for linguistics service routing
 }
 
 // Legacy type for backward compatibility

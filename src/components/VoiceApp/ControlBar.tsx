@@ -2,7 +2,6 @@ import React from 'react';
 import { useVoiceAppContext } from './VoiceAppContext';
 import { ChatInput } from './ChatInput';
 import { StatusIndicator } from '../../components/StatusIndicator';
-import { ServiceStatusIndicator } from '../../components/ServiceStatusIndicator';
 import { LogPanel } from './Common/LogPanel';
 
 export const ControlBar: React.FC = () => {
@@ -25,13 +24,6 @@ export const ControlBar: React.FC = () => {
       <div className="mt-4 pt-4 border-t border-gray-700">
         <div className="flex items-center space-x-2">
           <StatusIndicator status={session.status} t={t} />
-          {session.selectedAssistant?.isLinguisticsService && (
-            <ServiceStatusIndicator
-              isAvailable={session.linguisticsSession.sessionState.serviceAvailable}
-              isLoading={session.linguisticsSession.sessionState.isLoading}
-              error={session.linguisticsSession.sessionState.error}
-            />
-          )}
         </div>
         {session.isActive && ui.isDevMode && (
           <div className="text-xs text-gray-400 mt-2">
@@ -55,11 +47,11 @@ export const ControlBar: React.FC = () => {
           aria-label={session.status !== 'IDLE' && session.status !== 'ERROR' ? 'Stop recording' : 'Start recording'}
         >
           {session.status !== 'IDLE' && session.status !== 'ERROR' ? (
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="http://www.w3.org/2000/svg" fill="currentColor">
-              <path fillRule="evenodd" d="M5 10a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z" clipRule="evenodd" />
-            </svg>
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
+                           <path fillRule="evenodd" d="M5 10a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z" clipRule="evenodd" />
+                         </svg>
           ) : (
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
               <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
               <line x1="12" y1="19" x2="12" y2="23"></line>
