@@ -8,7 +8,6 @@ import { useAutoReconnectTimer } from './useAutoReconnectTimer';
 import { useTranscript } from './useTranscript';
 import { useLogger } from './useLogger';
 import { useAudioEngine } from './useAudioEngine';
-import { useLinguisticsSession } from './useLinguisticsSession';
 import { useLanguageManager } from './useLanguageManager';
 
 interface UseSessionManagerOptions {
@@ -43,7 +42,6 @@ interface UseSessionManagerReturn {
   transcript: ReturnType<typeof useTranscript>;
   audioEngine: ReturnType<typeof useAudioEngine>;
   logger: ReturnType<typeof useLogger>;
-  linguisticsSession: ReturnType<typeof useLinguisticsSession>;
   languageManager: ReturnType<typeof useLanguageManager>;
 }
 
@@ -105,8 +103,7 @@ export function useSessionManager(options: UseSessionManagerOptions = {}): UseSe
     stopSession, 
     isSessionActive, 
     setStatus,
-    sendTextMessage: sendLinguisticsMessage,
-    linguisticsSession
+    sendTextMessage: sendLinguisticsMessage
   } = useLiveSession({
     ai,
     selectedAssistant: selectedAssistant || { id: '', prompt: '' },
@@ -156,11 +153,6 @@ export function useSessionManager(options: UseSessionManagerOptions = {}): UseSe
       setSelectedAssistant(assistant);
       timer.startTimer();
       
-      if (assistant.isLinguisticsService) {
-        // Use linguistics session
-        logger.log('Starting linguistics session', 'INFO');
-      }
-      
       await startSession();
       logger.log('Session started successfully', 'INFO');
     } catch (error) {
@@ -197,18 +189,14 @@ export function useSessionManager(options: UseSessionManagerOptions = {}): UseSe
   // Communication actions
   const sendText = useCallback(async (text: string) => {
     try {
-      if (selectedAssistant?.isLinguisticsService) {
-        await sendLinguisticsMessage(text);
-      } else {
-        // Regular Gemini session - text would be handled by live session
-        transcript.addMessage('You', text);
-        logger.log(`Text sent: ${text}`, 'DEBUG');
-      }
+      // Regular Gemini session - text would be handled by live session
+      transcript.addMessage('You', text);
+      logger.log(`Text sent: ${text}`, 'DEBUG');
     } catch (error) {
       logger.log(`Failed to send text: ${error}`, 'ERROR');
       setErrorState('Failed to send message');
     }
-  }, [selectedAssistant, sendLinguisticsMessage, transcript, logger]);
+  }, [transcript, logger]);
 
   const sendStructuredMessage = useCallback(async (message: any) => {
     try {
@@ -246,7 +234,6 @@ export function useSessionManager(options: UseSessionManagerOptions = {}): UseSe
     transcript,
     audioEngine,
     logger,
-    linguisticsSession,
     languageManager,
   };
 }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ProgressCard } from '../../../components/ProgressCard';
+import { ProgressCard } from '../ProgressCard';
 
 interface ProgressCardsProps {
   progressUpdates?: any[];
