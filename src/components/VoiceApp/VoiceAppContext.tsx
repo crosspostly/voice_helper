@@ -86,6 +86,10 @@ interface VoiceAppContextType {
     setTextInputValue: (value: string) => void;
     copyButtonText: string;
     setCopyButtonText: (text: string) => void;
+    personaView: 'select' | 'edit' | 'add';
+    setPersonaView: (view: 'select' | 'edit' | 'add') => void;
+    editingPersona: any;
+    setEditingPersona: (persona: any) => void;
   };
 }
 
@@ -121,6 +125,8 @@ export const VoiceAppProvider: React.FC<VoiceAppProviderProps> = ({
   const [showLogs, setShowLogs] = React.useState(false);
   const [textInputValue, setTextInputValue] = React.useState('');
   const [copyButtonText, setCopyButtonText] = React.useState('');
+  const [personaView, setPersonaView] = React.useState<'select' | 'edit' | 'add'>('select');
+  const [editingPersona, setEditingPersona] = React.useState<any>(null);
 
   // Context value
   const contextValue: VoiceAppContextType = {
@@ -200,6 +206,10 @@ export const VoiceAppProvider: React.FC<VoiceAppProviderProps> = ({
       setTextInputValue,
       copyButtonText,
       setCopyButtonText,
+      personaView,
+      setPersonaView,
+      editingPersona,
+      setEditingPersona,
     },
   };
 
