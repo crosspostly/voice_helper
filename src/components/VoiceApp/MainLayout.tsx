@@ -9,20 +9,12 @@ export const MainLayout: React.FC = () => {
   const { session, language } = useVoiceAppContext();
   const { strings: t } = language;
 
-  if (!session.selectedAssistant) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center bg-gray-900 text-white">
-        Loading...
-      </div>
-    );
-  }
-
   return (
     <div className="h-screen bg-gray-900 text-gray-200 flex flex-col font-sans">
       {/* API Key Error Banner */}
-      {!session.selectedAssistant && (
+      {session.errorState && (
         <div className="bg-red-600 text-white text-center p-2 z-50">
-          {t.apiKeyError}
+          {session.errorState}
         </div>
       )}
 
