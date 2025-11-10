@@ -62,7 +62,7 @@ export const ModalsContainer: React.FC = () => {
         isDevMode={ui.isDevMode}
         setIsDevMode={ui.setIsDevMode}
         onSaveConversation={handleSaveConversation}
-        onSavePdf={session.transcript.exportToPdf}
+        onSavePdf={() => session.transcript?.exportToPdf?.()}
         onClearTranscript={handleClearTranscript}
         copyButtonText={ui.copyButtonText}
         customApiKey={ui.customApiKey}

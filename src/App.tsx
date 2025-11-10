@@ -1,5 +1,6 @@
 import React from 'react';
 import { VoiceApp } from './components/VoiceApp/VoiceApp';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 // Get custom API key from localStorage if available
 const getCustomApiKey = (): string | null => {
@@ -15,9 +16,11 @@ export const App: React.FC = () => {
   const customApiKey = getCustomApiKey();
   
   return (
-    <React.StrictMode>
-      <VoiceApp customApiKey={customApiKey} />
-    </React.StrictMode>
+    <ErrorBoundary>
+      <React.StrictMode>
+        <VoiceApp customApiKey={customApiKey} />
+      </React.StrictMode>
+    </ErrorBoundary>
   );
 };
 

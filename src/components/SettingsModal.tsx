@@ -190,7 +190,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                          {showSaveOptions && (
                             <div className="flex space-x-2 mt-2">
                                 <button onClick={onSaveConversation} className="flex-1 bg-gray-500 hover:bg-gray-400 text-white font-bold py-2 px-4 rounded-md transition-colors text-sm">{copyButtonText === 'convo-copy' ? t.copied : t.copyText}</button>
-                                <button onClick={onSavePdf} className="flex-1 bg-gray-500 hover:bg-gray-400 text-white font-bold py-2 px-4 rounded-md transition-colors text-sm">{t.saveAsPdf}</button>
+                                <button onClick={() => onSavePdf?.()} className="flex-1 bg-gray-500 hover:bg-gray-400 text-white font-bold py-2 px-4 rounded-md transition-colors text-sm">{t.saveAsPdf}</button>
                             </div>
                          )}
                     </div>

@@ -21,6 +21,7 @@ interface UseTranscriptReturn {
   clear: () => void;
   setNumMessagesToDisplay: (count: number) => void;
   loadMoreMessages: () => void;
+  setTranscript: (transcript: Transcript[]) => void;
   
   // Export actions
   exportToPdf: (filename?: string) => Promise<void>;
@@ -119,6 +120,7 @@ export function useTranscript(options: UseTranscriptOptions = {}): UseTranscript
     clear,
     setNumMessagesToDisplay,
     loadMoreMessages,
+    setTranscript, // Add setTranscript for external updates
     
     // Export actions
     exportToPdf,
