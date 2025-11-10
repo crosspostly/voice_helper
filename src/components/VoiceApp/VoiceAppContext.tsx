@@ -33,6 +33,7 @@ interface VoiceAppContextType {
     clear: () => void;
     setNumMessagesToDisplay: (count: number) => void;
     loadMoreMessages: () => void;
+    setTranscript: (transcript: any[]) => void;
     exportToPdf: (filename?: string) => Promise<void>;
     exportToJson: () => string;
     copyToClipboard: () => Promise<void>;
@@ -93,6 +94,69 @@ interface VoiceAppContextType {
     setEditingPersona: (persona: any) => void;
   };
 }
+
+// Default transcript object to prevent undefined errors
+const defaultTranscript = {
+  transcript: [],
+  displayedTranscript: [],
+  numMessagesToDisplay: 50,
+  addMessage: () => {},
+  appendPartial: () => {},
+  finalizeLast: () => {},
+  clear: () => {},
+  setNumMessagesToDisplay: () => {},
+  loadMoreMessages: () => {},
+  setTranscript: () => {},
+  exportToPdf: async () => console.warn('Transcript not initialized'),
+  exportToJson: () => '[]',
+  copyToClipboard: async () => console.warn('Transcript not initialized'),
+  canLoadMore: false,
+  transcriptEndRef: { current: null },
+};
+
+// Default session object to prevent undefined errors
+const defaultSession = {
+  status: 'IDLE' as const,
+  isActive: false,
+  timeLeft: 0,
+  reconnecting: false,
+  errorState: null,
+  selectedAssistant: null,
+  start: async () => {},
+  stop: async () => {},
+  restart: async () => {},
+  sendText: async () => {},
+  sendStructuredMessage: async () => {},
+  setSelectedAssistant: () => {},
+  setVoice: () => {},
+};
+
+// Default audio object to prevent undefined errors
+const defaultAudio = {
+  isPlaying: false,
+  playBase64Audio: async () => {},
+  playText: async () => {},
+  stopAll: () => {},
+  attachOnEnded: () => () => {},
+};
+
+// Default language object to prevent undefined errors
+const defaultLanguage = {
+  locale: 'en',
+  setLocale: () => {},
+  strings: {},
+  t: (key: string, fallback?: string) => fallback || key,
+  availableLanguages: ['en', 'ru'],
+};
+
+// Default logger object to prevent undefined errors
+const defaultLogger = {
+  logs: [],
+  log: () => {},
+  clearLogs: () => {},
+  getFilteredLogs: () => [],
+  logCount: 0,
+};
 
 // Create context
 const VoiceAppContext = createContext<VoiceAppContextType | null>(null);
@@ -156,63 +220,64 @@ export const VoiceAppProvider: React.FC<VoiceAppProviderProps> = ({
     }
   }, [personaService, sessionManager]);
 
-  // Context value
+  // Context value with safe defaults
   const contextValue: VoiceAppContextType = {
     session: {
-      status: sessionManager.status,
-      isActive: sessionManager.isActive,
-      timeLeft: sessionManager.timeLeft,
-      reconnecting: sessionManager.reconnecting,
-      errorState: sessionManager.errorState,
-      selectedAssistant: sessionManager.selectedAssistant,
-      start: sessionManager.start,
-      stop: sessionManager.stop,
-      restart: sessionManager.restart,
-      sendText: sessionManager.sendText,
-      sendStructuredMessage: sessionManager.sendStructuredMessage,
-      setSelectedAssistant: sessionManager.setSelectedAssistant,
-      setVoice: sessionManager.setVoice,
+      status: sessionManager?.status || defaultSession.status,
+      isActive: sessionManager?.isActive || defaultSession.isActive,
+      timeLeft: sessionManager?.timeLeft || defaultSession.timeLeft,
+      reconnecting: sessionManager?.reconnecting || defaultSession.reconnecting,
+      errorState: sessionManager?.errorState || defaultSession.errorState,
+      selectedAssistant: sessionManager?.selectedAssistant || defaultSession.selectedAssistant,
+      start: sessionManager?.start || defaultSession.start,
+      stop: sessionManager?.stop || defaultSession.stop,
+      restart: sessionManager?.restart || defaultSession.restart,
+      sendText: sessionManager?.sendText || defaultSession.sendText,
+      sendStructuredMessage: sessionManager?.sendStructuredMessage || defaultSession.sendStructuredMessage,
+      setSelectedAssistant: sessionManager?.setSelectedAssistant || defaultSession.setSelectedAssistant,
+      setVoice: sessionManager?.setVoice || defaultSession.setVoice,
     },
     
     transcript: {
-      transcript: sessionManager.transcript.transcript,
-      displayedTranscript: sessionManager.transcript.displayedTranscript,
-      numMessagesToDisplay: sessionManager.transcript.numMessagesToDisplay,
-      addMessage: sessionManager.transcript.addMessage,
-      appendPartial: sessionManager.transcript.appendPartial,
-      finalizeLast: sessionManager.transcript.finalizeLast,
-      clear: sessionManager.transcript.clear,
-      setNumMessagesToDisplay: sessionManager.transcript.setNumMessagesToDisplay,
-      loadMoreMessages: sessionManager.transcript.loadMoreMessages,
-      exportToPdf: sessionManager.transcript.exportToPdf,
-      exportToJson: sessionManager.transcript.exportToJson,
-      copyToClipboard: sessionManager.transcript.copyToClipboard,
-      canLoadMore: sessionManager.transcript.canLoadMore,
-      transcriptEndRef: sessionManager.transcript.transcriptEndRef,
+      transcript: sessionManager?.transcript?.transcript || defaultTranscript.transcript,
+      displayedTranscript: sessionManager?.transcript?.displayedTranscript || defaultTranscript.displayedTranscript,
+      numMessagesToDisplay: sessionManager?.transcript?.numMessagesToDisplay || defaultTranscript.numMessagesToDisplay,
+      addMessage: sessionManager?.transcript?.addMessage || defaultTranscript.addMessage,
+      appendPartial: sessionManager?.transcript?.appendPartial || defaultTranscript.appendPartial,
+      finalizeLast: sessionManager?.transcript?.finalizeLast || defaultTranscript.finalizeLast,
+      clear: sessionManager?.transcript?.clear || defaultTranscript.clear,
+      setNumMessagesToDisplay: sessionManager?.transcript?.setNumMessagesToDisplay || defaultTranscript.setNumMessagesToDisplay,
+      loadMoreMessages: sessionManager?.transcript?.loadMoreMessages || defaultTranscript.loadMoreMessages,
+      setTranscript: sessionManager?.transcript?.setTranscript || defaultTranscript.setTranscript,
+      exportToPdf: sessionManager?.transcript?.exportToPdf || defaultTranscript.exportToPdf,
+      exportToJson: sessionManager?.transcript?.exportToJson || defaultTranscript.exportToJson,
+      copyToClipboard: sessionManager?.transcript?.copyToClipboard || defaultTranscript.copyToClipboard,
+      canLoadMore: sessionManager?.transcript?.canLoadMore || defaultTranscript.canLoadMore,
+      transcriptEndRef: sessionManager?.transcript?.transcriptEndRef || defaultTranscript.transcriptEndRef,
     },
     
     audio: {
-      isPlaying: sessionManager.audioEngine.isPlaying,
-      playBase64Audio: sessionManager.audioEngine.playBase64Audio,
-      playText: sessionManager.audioEngine.playText,
-      stopAll: sessionManager.audioEngine.stopAll,
-      attachOnEnded: sessionManager.audioEngine.attachOnEnded,
+      isPlaying: sessionManager?.audioEngine?.isPlaying || defaultAudio.isPlaying,
+      playBase64Audio: sessionManager?.audioEngine?.playBase64Audio || defaultAudio.playBase64Audio,
+      playText: sessionManager?.audioEngine?.playText || defaultAudio.playText,
+      stopAll: sessionManager?.audioEngine?.stopAll || defaultAudio.stopAll,
+      attachOnEnded: sessionManager?.audioEngine?.attachOnEnded || defaultAudio.attachOnEnded,
     },
     
     language: {
-      locale: sessionManager.languageManager.locale,
-      setLocale: sessionManager.languageManager.setLocale,
-      strings: sessionManager.languageManager.strings,
-      t: sessionManager.languageManager.t,
-      availableLanguages: sessionManager.languageManager.availableLanguages,
+      locale: sessionManager?.languageManager?.locale || defaultLanguage.locale,
+      setLocale: sessionManager?.languageManager?.setLocale || defaultLanguage.setLocale,
+      strings: sessionManager?.languageManager?.strings || defaultLanguage.strings,
+      t: sessionManager?.languageManager?.t || defaultLanguage.t,
+      availableLanguages: sessionManager?.languageManager?.availableLanguages || defaultLanguage.availableLanguages,
     },
     
     logger: {
-      logs: sessionManager.logger.logs,
-      log: sessionManager.logger.log,
-      clearLogs: sessionManager.logger.clearLogs,
-      getFilteredLogs: sessionManager.logger.getFilteredLogs,
-      logCount: sessionManager.logger.logCount,
+      logs: sessionManager?.logger?.logs || defaultLogger.logs,
+      log: sessionManager?.logger?.log || defaultLogger.log,
+      clearLogs: sessionManager?.logger?.clearLogs || defaultLogger.clearLogs,
+      getFilteredLogs: sessionManager?.logger?.getFilteredLogs || defaultLogger.getFilteredLogs,
+      logCount: sessionManager?.logger?.logCount || defaultLogger.logCount,
     },
     
     ui: {

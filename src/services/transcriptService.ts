@@ -64,7 +64,18 @@ export class TranscriptService {
     return JSON.stringify(transcript, null, 2);
   }
 
-  async copyToClipboard(text: string): Promise<void> {
-    await navigator.clipboard.writeText(text);
+  async copyToClipboard(transcript: Transcript[]): Promise<void> {
+    const text = this.exportToText(transcript);
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch (error) {
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+    }
   }
 }
