@@ -43,14 +43,14 @@ export const PersonaEditor: React.FC = () => {
         value={editingPersona.title || ''} 
         onChange={(e) => ui.setEditingPersona({ ...editingPersona, title: e.target.value })} 
         placeholder={t.titlePlaceholder} 
-        className="w-full bg-gray-700 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500" 
+        className="w-full bg-white text-text border-2 border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent" 
       />
       <textarea
         key="persona-prompt-textarea"
         value={editingPersona.prompt || ''}
         onChange={(e) => ui.setEditingPersona({ ...editingPersona, prompt: e.target.value })}
         placeholder={t.promptPlaceholderWithNote}
-        className="w-full bg-gray-700 rounded-md px-3 py-2 h-40 resize-none focus:outline-none focus:ring-2 focus:ring-green-500"
+        className="w-full bg-white text-text border-2 border-border rounded-md px-3 py-2 h-40 resize-none focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
       />
       {(editingPersona.id?.startsWith('preset-')) && (
         <p className="text-xs text-amber-400">{t.presetPromptReadOnly}</p>
@@ -59,7 +59,7 @@ export const PersonaEditor: React.FC = () => {
         {personaView === 'edit' && editingPersona.id?.startsWith('custom-') && (
           <button 
             onClick={handleDeletePersona} 
-            className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md text-sm"
+            className="bg-accent2 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md text-sm"
           >
             {t.deletePersona}
           </button>
@@ -72,7 +72,7 @@ export const PersonaEditor: React.FC = () => {
         </button>
         <button 
           onClick={handleSavePersona} 
-          className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md text-sm"
+          className="bg-accent hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md text-sm"
         >
           {editingPersona.id?.startsWith('preset-') ? t.save : t.saveChanges}
         </button>
