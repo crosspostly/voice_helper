@@ -25,9 +25,9 @@ export const TranscriptMessage: React.FC<TranscriptMessageProps> = ({
 
   const getMessageStyle = (speaker: string) => {
     switch (speaker) {
-      case 'You': return 'bg-green-900';
-      case 'Linguistics': return 'bg-blue-900';
-      default: return 'bg-gray-700';
+      case 'You': return 'bg-accent text-white';
+      case 'Linguistics': return 'bg-grapefruit text-text';
+      default: return 'bg-card text-text border border-border';
     }
   };
 
@@ -35,17 +35,17 @@ export const TranscriptMessage: React.FC<TranscriptMessageProps> = ({
     if (speaker === 'Gemini' && window.marked) {
       return (
         <div 
-          className="prose prose-sm prose-invert max-w-none" 
+          className="prose prose-sm max-w-none text-text" 
           dangerouslySetInnerHTML={{ __html: window.marked.parse(text) }}
         />
       );
     }
-    return <p className="text-white whitespace-pre-wrap">{text}</p>;
+    return <p className="whitespace-pre-wrap">{text}</p>;
   };
 
   return (
     <div className={`flex items-start ${entry.speaker === 'You' ? 'justify-end' : 'justify-start'}`}>
-      <div className={`rounded-lg px-4 py-2 max-w-[80%] ${getMessageStyle(entry.speaker)} ${entry.isFinal === false ? 'opacity-80' : ''}`}>
+      <div className={`rounded-xl px-5 py-3 max-w-[80%] shadow-card mb-2 ${getMessageStyle(entry.speaker)} ${entry.isFinal === false ? 'opacity-80' : ''}`}>
         <p className="font-bold text-sm mb-1">
           {getSpeakerName(entry.speaker)}
         </p>
@@ -53,7 +53,7 @@ export const TranscriptMessage: React.FC<TranscriptMessageProps> = ({
       </div>
       <button 
         onClick={() => onCopy(entry.text, `msg-copy-${index}`)} 
-        className="ml-2 text-gray-400 hover:text-white p-1 self-start"
+        className="ml-2 text-border hover:text-accent p-1 self-start"
         aria-label={`Copy message ${index}`}
       >
         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
