@@ -30,13 +30,13 @@ export const ChatInput: React.FC = () => {
         value={ui.textInputValue}
         onChange={handleInputChange}
         onKeyDown={handleKeyDown}
-        className="flex-1 bg-white text-gray-900 border border-gray-300 rounded-full px-5 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-gray-400" 
+        className="flex-1 bg-card text-text border border-border rounded-full px-5 py-3 focus:outline-none focus:ring-2 focus:ring-accent placeholder-text opacity-60" 
         placeholder={t.sendMessage}
         disabled={session.status === 'SPEAKING'}
       />
       <button 
         onClick={handleSendTextMessage} 
-        className="bg-green-600 hover:bg-green-700 hover:scale-105 p-3 rounded-full disabled:bg-gray-400 disabled:cursor-not-allowed transition-all shadow-lg text-white"
+        className="bg-accent hover:bg-accent hover:opacity-90 p-3 rounded-full disabled:bg-border disabled:cursor-not-allowed transition-all shadow-lg text-white"
         disabled={!ui.textInputValue.trim() || session.status === 'SPEAKING'}
         aria-label="Send message"
       >

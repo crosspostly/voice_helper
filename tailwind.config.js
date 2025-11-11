@@ -24,9 +24,9 @@ module.exports = {
         accent: "#47B881",
         accent2: "#F87171",
         grapefruitDark: "#F6D3BE",
-        card: "#FFFFFF",
-        border: "#EDE0D4",
-        text: "#27362c",
+        card: "#FDF6ED",
+        border: "#E9D6C7",
+        text: "#3C2B1C",
       },
       boxShadow: {
         card: "0 4px 24px rgba(60, 60, 60, 0.09)",

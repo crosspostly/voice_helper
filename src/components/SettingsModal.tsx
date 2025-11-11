@@ -159,7 +159,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     if (!isOpen) return null;
     const isUsingCustomKey = localStorage.getItem('customApiKey') !== null;
     // Helper for fallback
-    const F = (key, fallback) => (t && t[key]) ? t[key] : FALLBACK_TEXTS_RU[key] || fallback;
+    const F = (key: string, fallback: string) => (t && t[key]) ? t[key] : FALLBACK_TEXTS_RU[key] || fallback;
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4" onClick={onClose}>
@@ -173,7 +173,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
                             <input type="checkbox" id="adult-mode" className="sr-only peer" checked={isAdultMode} onChange={() => setIsAdultMode(!isAdultMode)} />
-                            <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                            <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"></div>
                         </label>
                     </div>
                     <div className="flex items-center justify-between p-3 bg-gray-700 rounded-lg">
@@ -183,7 +183,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
                             <input type="checkbox" id="dev-mode" className="sr-only peer" checked={isDevMode} onChange={() => setIsDevMode(!isDevMode)} />
-                            <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                            <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"></div>
                         </label>
                     </div>
                     <div className="p-3 bg-gray-700 rounded-lg">
@@ -195,7 +195,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                 value={customApiKey}
                                 onChange={(e) => onCustomApiKeyChange(e.target.value)}
                                 placeholder={F('customApiKeyPlaceholder')}
-                                className="flex-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-sm text-white focus:ring-2 focus:ring-green-500 focus:outline-none"
+                                className="flex-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-sm text-white focus:ring-2 focus:ring-accent focus:outline-none"
                             />
                             <button
                                 onClick={onResetApiKey}
@@ -224,7 +224,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
                             <button
                                 onClick={handleExportSettings}
-                                className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md transition-colors text-sm sm:text-base"
+                                className="flex-1 bg-accent hover:bg-accent hover:opacity-90 text-white font-bold py-2 px-4 rounded-md transition-colors text-sm sm:text-base"
                             >
                                 {F('exportSettings')}
                             </button>
