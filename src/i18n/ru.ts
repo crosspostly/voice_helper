@@ -59,7 +59,7 @@ export const ru = {
   // Persona Titles
   persona_helpful: "Полезный Ассистент",
   persona_companion: "Терпеливый Собеседник",
-  persona_negotiator: "Эксперт по переговорам (по книге "Лингвистика")",
+  persona_negotiator: "Эксперт по переговорам (по книге \"Лингвистика\")",
   persona_linguistics: "Лингвистический Ассистент (Структурированное Обучение)",
   persona_therapist: "Терапевт",
   persona_romantic: "Романтический Партнер",

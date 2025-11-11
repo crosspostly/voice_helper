@@ -15,7 +15,7 @@ export const LogPanel: React.FC = () => {
   };
 
   return (
-    <div className="mt-2 text-xs text-gray-500">
+    <div className="mt-2 text-xs text-text opacity-70">
       <div 
         className="flex items-center justify-between cursor-pointer" 
         onClick={toggleLogs}
@@ -29,14 +29,14 @@ export const LogPanel: React.FC = () => {
         {ui.showLogs && (
           <button 
             onClick={clearLogs} 
-            className="hover:text-white px-2 py-0.5 rounded"
+            className="hover:text-text px-2 py-0.5 rounded hover:bg-base"
           >
             {t.clearLogs}
           </button>
         )}
       </div>
       {ui.showLogs && (
-        <pre className="mt-1 bg-gray-900 p-2 rounded-md overflow-x-auto h-24 border border-gray-700">
+        <pre className="mt-1 bg-gray-900 p-2 rounded-md overflow-x-auto h-24 border border-gray-700 text-gray-300">
           {logger.logs.join('\n')}
         </pre>
       )}

@@ -1,12 +1,12 @@
 import React from 'react';
 import { Transcript } from '../../../types';
 
-// Тёплая психологическая палитра
+// Тёплая психологическая палитра с использованием Tailwind переменных
 const palette = {
-  bubbleUser: 'bg-[#FDF6ED] border border-[#E9D6C7] text-[#3C2B1C]',        // светло-бежевый + тёмно-корич.
+  bubbleUser: 'bg-card border border-border text-text',                    // светло-бежевый + тёмно-корич.
   bubbleAI: 'bg-[#F7E7D6] border border-[#E3C8AC] text-[#2C3A21]',           // чуть темнее для ИИ
   bubbleLinguistics: 'bg-[#E7F4EA] border border-[#AEE1C5] text-[#1C392A]',  // нежно-зелёный
-  userLabel: 'text-[#4B3C2A]',
+  userLabel: 'text-text',
   aiLabel: 'text-[#20653C]',
 };
 
@@ -65,7 +65,7 @@ export const TranscriptMessage: React.FC<TranscriptMessageProps> = ({
       </div>
       <button 
         onClick={() => onCopy(entry.text, `msg-copy-${index}`)} 
-        className="ml-2 text-green-400 hover:text-green-600 p-1 self-start"
+        className="ml-2 text-accent hover:opacity-70 p-1 self-start"
         aria-label={`Copy message ${index}`}
       >
         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

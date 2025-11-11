@@ -9,7 +9,7 @@ export const ModalsContainer: React.FC = () => {
 
   const handleSaveConversation = () => {
     const conversationText = session.transcript.transcript
-      .map((t: any) => `${t.speaker}: ${t.text}`)
+      .map((entry: any) => `${entry.speaker}: ${entry.text}`)
       .join('\n');
     
     navigator.clipboard.writeText(conversationText);

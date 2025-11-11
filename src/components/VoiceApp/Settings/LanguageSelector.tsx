@@ -13,10 +13,10 @@ export const LanguageSelector: React.FC = () => {
     <select 
       value={language.locale} 
       onChange={handleLanguageChange} 
-      className="bg-gray-700 text-white rounded-md p-1 text-sm focus:outline-none"
+      className="bg-card text-text border border-border rounded-md p-1 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
     >
-      <option value="en">EN</option>
-      <option value="ru">RU</option>
+      <option value="en" className="bg-base text-text">EN</option>
+      <option value="ru" className="bg-base text-text">RU</option>
     </select>
   );
 };

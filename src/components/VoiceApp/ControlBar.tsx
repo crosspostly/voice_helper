@@ -21,19 +21,19 @@ export const ControlBar: React.FC = () => {
   return (
     <>
       {/* Status Bar */}
-      <div className="mt-4 pt-4 border-t border-gray-300">
+      <div className="mt-4 pt-4 border-t border-border">
         <div className="flex items-center space-x-2">
           <StatusIndicator status={session.status} t={t} />
         </div>
         {session.isActive && ui.isDevMode && (
-          <div className="text-xs text-gray-500 mt-2">
+          <div className="text-xs text-text opacity-70 mt-2">
             Session refresh in: {Math.floor(session.timeLeft / 60)}:{(session.timeLeft % 60).toString().padStart(2, '0')}
           </div>
         )}
       </div>
 
       {/* Input Controls */}
-      <div className="mt-4 pt-4 border-t border-gray-300 flex items-center space-x-3">
+      <div className="mt-4 pt-4 border-t border-border flex items-center space-x-3">
         <ChatInput />
         
         {/* Microphone Button */}
@@ -41,8 +41,8 @@ export const ControlBar: React.FC = () => {
           onClick={handleMicButtonClick}
           className={`p-4 rounded-full transition-all shadow-lg text-white ${
             session.status !== 'IDLE' && session.status !== 'ERROR' 
-              ? 'bg-red-600 hover:bg-red-700 hover:scale-105' 
-              : 'bg-green-600 hover:bg-green-700 hover:scale-105'
+              ? 'bg-red-500 hover:bg-red-600 hover:scale-105' 
+              : 'bg-accent hover:bg-accent hover:opacity-90 hover:scale-105'
           }`}
           aria-label={session.status !== 'IDLE' && session.status !== 'ERROR' ? 'Stop recording' : 'Start recording'}
         >
