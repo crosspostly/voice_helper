@@ -10,23 +10,23 @@ export const MainLayout: React.FC = () => {
   const { strings: t } = language;
 
   return (
-    <div className="h-screen bg-gray-900 text-gray-200 flex flex-col font-sans">
+    <div className="min-h-screen bg-base text-text flex flex-col font-sans">
       {/* API Key Error Banner */}
       {session.errorState && (
-        <div className="bg-red-600 text-white text-center p-2 z-50">
+        <div className="bg-accent2 text-white text-center p-2 z-50">
           {session.errorState}
         </div>
       )}
 
       {/* Mobile Header */}
-      <div className="md:hidden p-4 bg-gray-800 flex justify-between items-center border-b border-gray-700">
+      <div className="md:hidden p-4 bg-grapefruit flex justify-between items-center border-b border-border">
         <h1 className="text-xl font-bold">{t.title}</h1>
       </div>
 
       {/* Main Content Area */}
       <div className="flex flex-1 overflow-hidden">
         <SidePanel />
-        <div className="bg-gray-800 p-4 flex flex-col flex-1 md:border-l md:border-gray-700 flex-1">
+        <div className="bg-card p-4 flex flex-col flex-1 md:border-l md:border-border flex-1">
           <TranscriptPanel />
           <ControlBar />
         </div>
