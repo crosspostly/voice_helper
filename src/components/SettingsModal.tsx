@@ -136,32 +136,32 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     const isUsingCustomKey = localStorage.getItem('customApiKey') !== null;
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4" onClick={onClose}>
-            <div className="bg-white text-gray-900 rounded-2xl p-4 sm:p-6 md:p-8 max-w-md sm:max-w-xl w-full shadow-2xl border border-gray-200 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-                <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-center text-gray-900">{t.advancedSettings}</h2>
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4" onClick={onClose}>
+            <div className="bg-gray-800 rounded-lg shadow-xl p-4 sm:p-6 w-full max-w-md max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                <h2 className="text-xl font-bold mb-4 sm:mb-6 text-center text-white">{t.advancedSettings}</h2>
                 <div className="space-y-3 sm:space-y-4">
-                    <div className="flex items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="flex items-center justify-between p-3 bg-gray-700 rounded-lg">
                         <div className="flex-1 mr-3">
-                            <label htmlFor="adult-mode" className="font-medium text-gray-900 text-sm sm:text-base">{t.adultMode}</label>
-                            <p className="text-xs text-gray-600 mt-1">{t.adultModeDesc}</p>
+                            <label htmlFor="adult-mode" className="font-medium text-white text-sm sm:text-base">{t.adultMode}</label>
+                            <p className="text-xs text-gray-400 mt-1">{t.adultModeDesc}</p>
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
                             <input type="checkbox" id="adult-mode" className="sr-only peer" checked={isAdultMode} onChange={() => setIsAdultMode(!isAdultMode)} />
-                            <div className="w-11 h-6 bg-gray-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                            <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
                         </label>
                     </div>
-                    <div className="flex items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="flex items-center justify-between p-3 bg-gray-700 rounded-lg">
                         <div className="flex-1 mr-3">
-                            <label htmlFor="dev-mode" className="font-medium text-gray-900 text-sm sm:text-base">{t.devMode}</label>
-                            <p className="text-xs text-gray-600 mt-1">{t.devModeDesc}</p>
+                            <label htmlFor="dev-mode" className="font-medium text-white text-sm sm:text-base">{t.devMode}</label>
+                            <p className="text-xs text-gray-400 mt-1">{t.devModeDesc}</p>
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
                             <input type="checkbox" id="dev-mode" className="sr-only peer" checked={isDevMode} onChange={() => setIsDevMode(!isDevMode)} />
-                            <div className="w-11 h-6 bg-gray-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                            <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
                         </label>
                     </div>
-                    <div className="p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-200">
-                        <label htmlFor="api-key-input" className="block font-medium text-gray-900 mb-2 text-sm sm:text-base">{t.customApiKey}</label>
+                    <div className="p-3 bg-gray-700 rounded-lg">
+                        <label htmlFor="api-key-input" className="block font-medium text-white mb-1 text-sm sm:text-base">{t.customApiKey}</label>
                         <div className="flex items-center space-x-2">
                             <input
                                 id="api-key-input"
@@ -169,40 +169,40 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                 value={customApiKey}
                                 onChange={(e) => onCustomApiKeyChange(e.target.value)}
                                 placeholder={t.customApiKeyPlaceholder}
-                                className="flex-1 w-full bg-white text-gray-900 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:outline-none"
+                                className="flex-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-sm text-white focus:ring-2 focus:ring-green-500 focus:outline-none"
                             />
                             <button
                                 onClick={onResetApiKey}
-                                className="bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed text-gray-900 font-bold py-2 px-3 rounded-lg text-sm whitespace-nowrap transition-colors flex-shrink-0"
+                                className="bg-gray-600 hover:bg-gray-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2 px-3 rounded-md text-sm whitespace-nowrap transition-colors flex-shrink-0"
                                 disabled={!isUsingCustomKey}
                                 title={isUsingCustomKey ? t.resetToDefault : 'Already using default key'}
                             >
                                 ↺
                             </button>
                         </div>
-                        <p className="text-xs text-gray-600 mt-2">{t.customApiKeyDesc}</p>
+                        <p className="text-xs text-gray-400 mt-1">{t.customApiKeyDesc}</p>
                     </div>
-                    <div className="p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-200">
-                         <button onClick={onClearTranscript} className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 sm:py-3 px-4 sm:px-5 rounded-lg shadow-sm transition-colors text-sm sm:text-base">{t.clearTranscript}</button>
+                    <div className="p-3 bg-gray-700 rounded-lg">
+                         <button onClick={onClearTranscript} className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md transition-colors text-sm sm:text-base">{t.clearTranscript}</button>
                     </div>
-                    <div className="p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-200">
-                         <button onClick={() => setShowSaveOptions(prev => !prev)} className="w-full bg-gray-200 hover:bg-gray-300 text-gray-900 font-bold py-2 sm:py-3 px-4 sm:px-5 rounded-lg shadow-sm transition-colors text-sm sm:text-base">{t.saveConversation}...</button>
+                    <div className="p-3 bg-gray-700 rounded-lg">
+                         <button onClick={() => setShowSaveOptions(prev => !prev)} className="w-full bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-md transition-colors text-sm sm:text-base">{t.saveConversation}...</button>
                          {showSaveOptions && (
-                            <div className="flex space-x-2 mt-2 sm:mt-3">
-                                <button onClick={onSaveConversation} className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-900 font-bold py-2 px-3 sm:px-4 rounded-lg shadow-sm transition-colors text-xs sm:text-sm">{copyButtonText === 'convo-copy' ? t.copied : t.copyText}</button>
-                                <button onClick={() => onSavePdf?.()} className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-900 font-bold py-2 px-3 sm:px-4 rounded-lg shadow-sm transition-colors text-xs sm:text-sm">{t.saveAsPdf}</button>
+                            <div className="flex space-x-2 mt-2">
+                                <button onClick={onSaveConversation} className="flex-1 bg-gray-500 hover:bg-gray-400 text-white font-bold py-2 px-3 sm:px-4 rounded-md transition-colors text-xs sm:text-sm">{copyButtonText === 'convo-copy' ? t.copied : t.copyText}</button>
+                                <button onClick={() => onSavePdf?.()} className="flex-1 bg-gray-500 hover:bg-gray-400 text-white font-bold py-2 px-3 sm:px-4 rounded-md transition-colors text-xs sm:text-sm">{t.saveAsPdf}</button>
                             </div>
                          )}
                     </div>
-                    <div className="p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="p-3 bg-gray-700 rounded-lg">
                         <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
                             <button
                                 onClick={handleExportSettings}
-                                className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 sm:py-3 px-4 sm:px-5 rounded-lg shadow-sm transition-colors text-sm sm:text-base"
+                                className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md transition-colors text-sm sm:text-base"
                             >
                                 {t.exportSettings}
                             </button>
-                            <label className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-900 font-bold py-2 sm:py-3 px-4 sm:px-5 rounded-lg shadow-sm transition-colors cursor-pointer text-center text-sm sm:text-base">
+                            <label className="flex-1 bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-md transition-colors cursor-pointer text-center text-sm sm:text-base">
                                 {t.importSettings}
                                 <input type="file" className="hidden" accept=".json" onChange={handleImportSettings} />
                             </label>
@@ -210,7 +210,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     </div>
                 </div>
                  <div className="mt-4 sm:mt-6 text-center">
-                    <button onClick={onClose} className="bg-gray-200 hover:bg-gray-300 text-gray-900 font-bold py-2 sm:py-3 px-5 sm:px-6 rounded-lg shadow-sm transition-colors text-sm sm:text-base">{t.cancel}</button>
+                    <button onClick={onClose} className="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-5 sm:px-6 rounded-md transition-colors text-sm sm:text-base">{t.cancel}</button>
                 </div>
             </div>
         </div>
