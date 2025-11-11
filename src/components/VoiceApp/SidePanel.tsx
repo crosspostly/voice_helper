@@ -11,7 +11,7 @@ export const SidePanel: React.FC = () => {
   return (
     <>
       {/* Desktop Side Panel */}
-      <div className="hidden md:flex w-1/3 lg:w-1/4 bg-gray-800 p-4 flex-col space-y-4 overflow-y-auto">
+      <div className="hidden md:flex w-1/3 lg:w-1/4 bg-grapefruit border-r border-border p-6 flex-col space-y-6 overflow-y-auto">
         <SidePanelContent />
       </div>
 
@@ -20,7 +20,7 @@ export const SidePanel: React.FC = () => {
         <div className="md:hidden fixed inset-0 bg-black bg-opacity-50 z-40 transition-opacity" 
              onClick={() => ui.setIsPanelVisible(false)} />
       )}
-      <div className={`md:hidden fixed top-0 left-0 h-full w-4/5 max-w-xs bg-gray-800 p-4 flex-col space-y-4 overflow-y-auto z-50 shadow-lg transform transition-transform duration-300 ${ui.isPanelVisible ? 'translate-x-0' : '-translate-x-full'}`}>
+      <div className={`md:hidden fixed top-0 left-0 h-full w-4/5 max-w-xs bg-grapefruit p-6 flex-col space-y-6 overflow-y-auto z-50 shadow-lg transform transition-transform duration-300 ${ui.isPanelVisible ? 'translate-x-0' : '-translate-x-full'}`}>
         <SidePanelContent />
       </div>
     </>
@@ -34,12 +34,12 @@ const SidePanelContent: React.FC = () => {
   return (
     <>
       {/* Header with Settings and Language */}
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-bold">{t.personaTitle}</h2>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-bold text-text">{t.personaTitle}</h2>
         <div className="flex items-center space-x-2">
           <button 
             onClick={() => ui.setIsSettingsModalOpen(true)} 
-            className="p-2 rounded-full hover:bg-gray-700"
+            className="p-2 rounded-full hover:bg-accent/20 bg-card border border-border"
             aria-label="Settings"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
@@ -49,10 +49,8 @@ const SidePanelContent: React.FC = () => {
           <LanguageSelector />
         </div>
       </div>
-      
       {/* Persona Selection */}
       <PersonaSelector />
-      
       {/* Voice Settings */}
       <VoiceSettings />
     </>
