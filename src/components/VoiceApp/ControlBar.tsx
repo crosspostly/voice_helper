@@ -21,35 +21,35 @@ export const ControlBar: React.FC = () => {
   return (
     <>
       {/* Status Bar */}
-      <div className="mt-4 pt-4 border-t border-gray-700">
+      <div className="mt-4 pt-4 border-t border-gray-300">
         <div className="flex items-center space-x-2">
           <StatusIndicator status={session.status} t={t} />
         </div>
         {session.isActive && ui.isDevMode && (
-          <div className="text-xs text-gray-400 mt-2">
+          <div className="text-xs text-gray-500 mt-2">
             Session refresh in: {Math.floor(session.timeLeft / 60)}:{(session.timeLeft % 60).toString().padStart(2, '0')}
           </div>
         )}
       </div>
 
       {/* Input Controls */}
-      <div className="mt-4 pt-4 border-t border-gray-700 flex items-center space-x-2">
+      <div className="mt-4 pt-4 border-t border-gray-300 flex items-center space-x-3">
         <ChatInput />
         
         {/* Microphone Button */}
         <button
           onClick={handleMicButtonClick}
-          className={`p-4 rounded-full transition-colors ${
+          className={`p-4 rounded-full transition-all shadow-lg text-white ${
             session.status !== 'IDLE' && session.status !== 'ERROR' 
-              ? 'bg-red-600 hover:bg-red-700' 
-              : 'bg-green-600 hover:bg-green-700'
+              ? 'bg-red-600 hover:bg-red-700 hover:scale-105' 
+              : 'bg-green-600 hover:bg-green-700 hover:scale-105'
           }`}
           aria-label={session.status !== 'IDLE' && session.status !== 'ERROR' ? 'Stop recording' : 'Start recording'}
         >
           {session.status !== 'IDLE' && session.status !== 'ERROR' ? (
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
-                           <path fillRule="evenodd" d="M5 10a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z" clipRule="evenodd" />
-                         </svg>
+              <path fillRule="evenodd" d="M5 10a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z" clipRule="evenodd" />
+            </svg>
           ) : (
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
