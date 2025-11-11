@@ -1,6 +1,15 @@
 import React from 'react';
 import { Transcript } from '../../../types';
 
+// Тёплая психологическая палитра
+const palette = {
+  bubbleUser: 'bg-[#FDF6ED] border border-[#E9D6C7] text-[#3C2B1C]',        // светло-бежевый + тёмно-корич.
+  bubbleAI: 'bg-[#F7E7D6] border border-[#E3C8AC] text-[#2C3A21]',           // чуть темнее для ИИ
+  bubbleLinguistics: 'bg-[#E7F4EA] border border-[#AEE1C5] text-[#1C392A]',  // нежно-зелёный
+  userLabel: 'text-[#4B3C2A]',
+  aiLabel: 'text-[#20653C]',
+};
+
 interface TranscriptMessageProps {
   entry: Transcript;
   index: number;
@@ -26,11 +35,11 @@ export const TranscriptMessage: React.FC<TranscriptMessageProps> = ({
   const getMessageStyle = (speaker: string) => {
     switch (speaker) {
       case 'You': 
-        return 'bg-green-600 text-white';
+        return `${palette.bubbleUser} ${palette.userLabel}`;
       case 'Linguistics': 
-        return 'bg-blue-100 text-gray-900';
+        return `${palette.bubbleLinguistics}`;
       default: // Gemini
-        return 'bg-white text-gray-900 border-2 border-gray-300';
+        return `${palette.bubbleAI} ${palette.aiLabel}`;
     }
   };
 
@@ -38,7 +47,7 @@ export const TranscriptMessage: React.FC<TranscriptMessageProps> = ({
     if (speaker === 'Gemini' && window.marked) {
       return (
         <div 
-          className="prose prose-sm max-w-none text-gray-900" 
+          className="prose prose-sm max-w-none" 
           dangerouslySetInnerHTML={{ __html: window.marked.parse(text) }}
         />
       );
@@ -48,15 +57,15 @@ export const TranscriptMessage: React.FC<TranscriptMessageProps> = ({
 
   return (
     <div className={`flex items-start ${entry.speaker === 'You' ? 'justify-end' : 'justify-start'}`}>
-      <div className={`rounded-2xl px-5 py-3 max-w-[80%] shadow-md mb-2 ${getMessageStyle(entry.speaker)} ${entry.isFinal === false ? 'opacity-80' : ''}`}>
-        <p className="font-bold text-sm mb-1">
+      <div className={`rounded-2xl px-5 py-3 max-w-[80%] shadow-md mb-2 ${getMessageStyle(entry.speaker)} ${entry.isFinal === false ? 'opacity-80' : ''}`} style={{backdropFilter:'blur(2px)'}}>
+        <p className="font-bold text-xs mb-1 opacity-80">
           {getSpeakerName(entry.speaker)}
         </p>
         {renderMessageContent(entry.text, entry.speaker)}
       </div>
       <button 
         onClick={() => onCopy(entry.text, `msg-copy-${index}`)} 
-        className="ml-2 text-gray-400 hover:text-green-600 p-1 self-start"
+        className="ml-2 text-green-400 hover:text-green-600 p-1 self-start"
         aria-label={`Copy message ${index}`}
       >
         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
