@@ -1,0 +1,36 @@
+[33mcommit fc48086a2c445a06ebbc7aa80551d5e98f6963ab[m[33m ([m[1;31morigin/feat-integrate-linguistics-assistant-api-client-retry-baseurl-persona-routing-live-session-streaming-progress-cards-tests[m[33m)[m
+Author: engine-labs-app[bot] <140088366+engine-labs-app[bot]@users.noreply.github.com>
+Date:   Mon Nov 10 04:56:17 2025 +0000
+
+    feat(linguistics): integrate linguistics assistant persona, API client, new hook, and UI
+    
+    Adds seamless integration for a new Linguistics Assistant persona routed through
+    a structured linguistics service. Implements a robust API client with retry/backoff
+    and environment-based URL, ProgressCard and ServiceStatusIndicator UI components,
+    a dedicated useLinguisticsSession hook, and development mock support. Includes
+    Vitest and RTL tests for API client, new hook, and components. Maintains
+    backward compatibility with all existing personas, adds accessibility and
+    responsive improvements, and supports fallback to regular Gemini prompts if
+    the service is unavailable.
+    
+    Refactors transcript logic to render linguistics progress/exercise cards.
+    
+    BREAKING CHANGE: Env config for VITE_LINGUISTICS_API_URL is now required for linguistics persona.
+
+.env.example
+App.tsx
+components/ProgressCard.tsx
+components/ServiceStatusIndicator.tsx
+docs/LINGUISTICS_INTEGRATION.md
+hooks/useLinguisticsSession.ts
+hooks/useLiveSession.ts
+package-lock.json
+package.json
+services/linguisticsApi.ts
+services/mockLinguisticsService.ts
+tests/ProgressCard.test.tsx
+tests/linguisticsApi.test.ts
+tests/setup.ts
+tests/useLinguisticsSession.test.tsx
+types.ts
+vite.config.ts
