@@ -6,7 +6,7 @@ import { ControlBar } from './ControlBar';
 import { ModalsContainer } from './ModalsContainer';
 
 export const MainLayout: React.FC = () => {
-  const { session, language } = useVoiceAppContext();
+  const { session, language, ui } = useVoiceAppContext();
   const { strings: t } = language;
 
   return (
@@ -18,15 +18,25 @@ export const MainLayout: React.FC = () => {
         </div>
       )}
 
-      {/* Mobile Header */}
-      <div className="md:hidden p-4 bg-white border-b border-gray-300 flex justify-between items-center shadow-sm">
-        <h1 className="text-xl font-bold text-gray-900">{t.title}</h1>
+      {/* Mobile Header with Hamburger Menu */}
+      <div className="md:hidden p-3 bg-white border-b border-gray-300 flex justify-between items-center shadow-sm">
+        <button
+          onClick={() => ui.setIsPanelVisible(true)}
+          className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+          aria-label="Open menu"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+        <h1 className="text-lg font-bold text-gray-900">{t.title}</h1>
+        <div className="w-10" /> {/* Spacer for centering */}
       </div>
 
       {/* Main Content Area */}
       <div className="flex flex-1 overflow-hidden">
         <SidePanel />
-        <div className="bg-white p-6 flex flex-col flex-1 md:border-l md:border-gray-300">
+        <div className="bg-white p-4 md:p-6 flex flex-col flex-1 md:border-l md:border-gray-300">
           <TranscriptPanel />
           <ControlBar />
         </div>
