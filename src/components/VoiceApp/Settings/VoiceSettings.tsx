@@ -27,16 +27,16 @@ export const VoiceSettings: React.FC = () => {
   return (
     <>
       <div>
-        <label htmlFor="voice" className="block text-sm font-medium text-text mb-2">
+        <label htmlFor="voice" className="block text-sm font-medium text-gray-800 mb-2">
           {t.voiceSelection}
         </label>
         <select 
           id="voice" 
           onChange={handleVoiceChange} 
-          className="w-full bg-card text-text border border-border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent font-medium"
+          className="w-full bg-white text-gray-800 border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 font-medium shadow-sm"
         >
           {VOICES.map(voice => (
-            <option key={voice} value={voice} className="bg-base text-text">{voice}</option>
+            <option key={voice} value={voice} className="bg-white text-gray-800">{voice}</option>
           ))}
         </select>
       </div>
@@ -44,7 +44,7 @@ export const VoiceSettings: React.FC = () => {
       {personaSupportsRateAndPitch() && (
         <>
           <div>
-            <label htmlFor="speechRate" className="block text-sm font-medium text-text mb-2">
+            <label htmlFor="speechRate" className="block text-sm font-medium text-gray-800 mb-2">
               {t.speechRate}
             </label>
             <input 
@@ -54,11 +54,11 @@ export const VoiceSettings: React.FC = () => {
               max="2.0" 
               step="0.1" 
               onChange={handleSpeakingRateChange} 
-              className="w-full h-2 bg-border rounded-lg appearance-none cursor-pointer" 
+              className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer" 
             />
           </div>
           <div>
-            <label htmlFor="pitch" className="block text-sm font-medium text-text mb-2">
+            <label htmlFor="pitch" className="block text-sm font-medium text-gray-800 mb-2">
               {t.speechPitch}
             </label>
             <input 
@@ -68,7 +68,7 @@ export const VoiceSettings: React.FC = () => {
               max="10" 
               step="0.5" 
               onChange={handlePitchChange} 
-              className="w-full h-2 bg-border rounded-lg appearance-none cursor-pointer" 
+              className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer" 
             />
           </div>
         </>

@@ -53,13 +53,22 @@ export const PersonaSelector: React.FC = () => {
   // Fallback helper
   const F = (key, fallback) => t[key] || FALLBACK_TEXTS_RU[key] || fallback;
 
+  // Debug: Show if we have any personas
+  if (allAssistants.length === 0) {
+    return (
+      <div className="mt-4 p-4 bg-red-100 border border-red-300 rounded-lg">
+        <p className="text-red-700">No personas available. Please check the console for errors.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="relative mt-4">
       <div className="flex items-center space-x-2">
         <select
           value={selectedAssistant?.id || ''}
           onChange={handleSelectedAssistantChange}
-          className="w-full bg-card text-text border border-border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent font-medium"
+          className="w-full bg-white text-gray-800 border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 font-medium shadow-sm"
         >
           <option value="" disabled>
             {t.selectPersona || 'Выберите персону...'}
@@ -67,7 +76,7 @@ export const PersonaSelector: React.FC = () => {
           {presetAssistants.length > 0 && (
             <optgroup label={F('presetGroup', 'Шаблоны')}>
               {presetAssistants.map((assistant) => (
-                <option key={assistant.id} value={assistant.id} className="bg-base text-text">
+                <option key={assistant.id} value={assistant.id} className="bg-white text-gray-800">
                   {getPersonaDisplayName(assistant)}
                 </option>
               ))}
@@ -76,22 +85,22 @@ export const PersonaSelector: React.FC = () => {
           {userCustomAssistants.length > 0 && (
             <optgroup label={F('customGroup', 'Мои персонажи')}>
               {userCustomAssistants.map((assistant) => (
-                <option key={assistant.id} value={assistant.id} className="bg-base text-text">
+                <option key={assistant.id} value={assistant.id} className="bg-white text-gray-800">
                   {getPersonaDisplayName(assistant)}
                 </option>
               ))}
             </optgroup>
           )}
-          <option value="add-new" className="bg-accent text-white font-bold">
+          <option value="add-new" className="bg-green-500 text-white font-bold">
             {F('createNewPersona', 'Создать новую персону...')}
           </option>
         </select>
         <button 
           onClick={handleEditPersona}
-          className="p-2 bg-card border border-border rounded-lg hover:bg-base transition-colors" 
+          className="p-2 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-200 hover:border-green-500 transition-colors" 
           aria-label={t.editPersona}
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-text" viewBox="0 0 24 24" fill="currentColor">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-800" viewBox="0 0 24 24" fill="currentColor">
             <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
             <path fillRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" />
           </svg>
