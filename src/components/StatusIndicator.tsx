@@ -11,8 +11,8 @@ export const StatusIndicator: React.FC<StatusIndicatorProps> = ({ status, t }) =
     switch (status) {
       case 'IDLE': return { text: t.status_IDLE, color: 'bg-gray-500' };
       case 'CONNECTING': return { text: t.status_CONNECTING, color: 'bg-yellow-500 animate-pulse' };
-      case 'LISTENING': return { text: t.status_LISTENING, color: 'bg-blue-500 animate-pulse' };
-      case 'SPEAKING': return { text: t.status_SPEAKING, color: 'bg-green-500' };
+      case 'LISTENING': return { text: t.status_LISTENING, color: 'bg-accent animate-pulse' };
+      case 'SPEAKING': return { text: t.status_SPEAKING, color: 'bg-accent' };
       case 'PROCESSING': return { text: t.status_PROCESSING, color: 'bg-teal-500 animate-pulse' };
       case 'RECONNECTING': return { text: t.status_RECONNECTING, color: 'bg-orange-500 animate-pulse' };
       case 'ERROR': return { text: t.status_ERROR, color: 'bg-red-500' };

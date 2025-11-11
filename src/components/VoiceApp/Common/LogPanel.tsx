@@ -36,7 +36,7 @@ export const LogPanel: React.FC = () => {
         )}
       </div>
       {ui.showLogs && (
-        <pre className="mt-1 bg-gray-900 p-2 rounded-md overflow-x-auto h-24 border border-gray-700 text-gray-300">
+        <pre className="mt-1 bg-gray-800 p-2 rounded-md overflow-x-auto h-24 border border-border text-gray-300">
           {logger.logs.join('\n')}
         </pre>
       )}
