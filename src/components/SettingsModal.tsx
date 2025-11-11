@@ -2,6 +2,27 @@ import React, { useState, useEffect } from 'react';
 
 const VOICES = ['Zephyr', 'Puck', 'Charon', 'Kore', 'Fenrir'];
 
+// Temporary fallback for missing translations
+const FALLBACK_TEXTS_RU = {
+    advancedSettings: 'Расширенные настройки',
+    adultMode: 'Режим 18+',
+    adultModeDesc: 'Включает более откровенные диалоги',
+    devMode: 'Режим разработчика',
+    devModeDesc: 'Включает подробное логирование',
+    customApiKey: 'Свой API ключ Gemini',
+    customApiKeyPlaceholder: 'Введите API ключ',
+    customApiKeyDesc: 'Если пусто, будет использован ключ по умолчанию',
+    clearTranscript: 'Очистить диалог',
+    saveConversation: 'Сохранить Разговор',
+    copyText: 'Копировать текст',
+    copied: 'Скопировано!',
+    saveAsPdf: 'Сохранить в PDF',
+    exportSettings: 'Экспорт настроек',
+    importSettings: 'Импорт настроек',
+    cancel: 'Отмена',
+    resetToDefault: 'Сбросить'
+};
+
 interface SettingsModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -37,6 +58,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 }) => {
     const [isAdultMode, setIsAdultMode] = useState(() => localStorage.getItem('isAdultMode') === 'true');
     const [showSaveOptions, setShowSaveOptions] = useState(false);
+
+    useEffect(() => {
+        if (isOpen) {
+            console.log('Settings Modal - Translations:', t);
+        }
+    }, [isOpen, t]);
 
     useEffect(() => {
         try {
@@ -90,20 +117,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     const text = e.target?.result;
                     if (typeof text === 'string') {
                         const settings = JSON.parse(text);
-                        // Validate and set settings
                         if (Array.isArray(settings.assistants)) {
                             localStorage.setItem('assistants', JSON.stringify(settings.assistants));
                         }
                         if (typeof settings.selectedAssistantId === 'string') {
                             localStorage.setItem('selectedAssistantId', settings.selectedAssistantId);
                         }
-                         if (typeof settings.selectedVoice === 'string') {
+                        if (typeof settings.selectedVoice === 'string') {
                             localStorage.setItem('selectedVoice', settings.selectedVoice);
                         }
                         if (settings.speakingRate) {
-                             localStorage.setItem('speakingRate', String(settings.speakingRate));
+                            localStorage.setItem('speakingRate', String(settings.speakingRate));
                         }
-                         if (settings.pitch) {
+                        if (settings.pitch) {
                             localStorage.setItem('pitch', String(settings.pitch));
                         }
                         if (typeof settings.isAdultMode === 'boolean') {
@@ -114,16 +140,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             setIsDevMode(settings.isDevMode);
                             localStorage.setItem('isDevMode', String(settings.isDevMode));
                         }
-                         if (settings.lang) {
-                             localStorage.setItem('language', settings.lang);
-                         }
-
-                        alert(t.importSuccess);
+                        if (settings.lang) {
+                            localStorage.setItem('language', settings.lang);
+                        }
+                        alert(t.importSuccess || 'Настройки успешно импортированы!');
                         window.location.reload(); 
                     }
                 } catch (error) {
                     log(`Failed to parse settings file: ${(error as Error).message}`, 'ERROR');
-                    alert(t.importError);
+                    alert(t.importError || 'Ошибка импорта. Возможно, файл поврежден.');
                 }
             };
             reader.readAsText(file);
@@ -132,18 +157,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     };
 
     if (!isOpen) return null;
-
     const isUsingCustomKey = localStorage.getItem('customApiKey') !== null;
+    // Helper for fallback
+    const F = (key, fallback) => (t && t[key]) ? t[key] : FALLBACK_TEXTS_RU[key] || fallback;
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4" onClick={onClose}>
             <div className="bg-gray-800 rounded-lg shadow-xl p-4 sm:p-6 w-full max-w-md max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-                <h2 className="text-xl font-bold mb-4 sm:mb-6 text-center text-white">{t.advancedSettings}</h2>
+                <h2 className="text-xl font-bold mb-4 sm:mb-6 text-center text-white">{F('advancedSettings')}</h2>
                 <div className="space-y-3 sm:space-y-4">
                     <div className="flex items-center justify-between p-3 bg-gray-700 rounded-lg">
                         <div className="flex-1 mr-3">
-                            <label htmlFor="adult-mode" className="font-medium text-white text-sm sm:text-base">{t.adultMode}</label>
-                            <p className="text-xs text-gray-400 mt-1">{t.adultModeDesc}</p>
+                            <label htmlFor="adult-mode" className="font-medium text-white text-sm sm:text-base">{F('adultMode')}</label>
+                            <p className="text-xs text-gray-400 mt-1">{F('adultModeDesc')}</p>
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
                             <input type="checkbox" id="adult-mode" className="sr-only peer" checked={isAdultMode} onChange={() => setIsAdultMode(!isAdultMode)} />
@@ -152,8 +178,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     </div>
                     <div className="flex items-center justify-between p-3 bg-gray-700 rounded-lg">
                         <div className="flex-1 mr-3">
-                            <label htmlFor="dev-mode" className="font-medium text-white text-sm sm:text-base">{t.devMode}</label>
-                            <p className="text-xs text-gray-400 mt-1">{t.devModeDesc}</p>
+                            <label htmlFor="dev-mode" className="font-medium text-white text-sm sm:text-base">{F('devMode')}</label>
+                            <p className="text-xs text-gray-400 mt-1">{F('devModeDesc')}</p>
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
                             <input type="checkbox" id="dev-mode" className="sr-only peer" checked={isDevMode} onChange={() => setIsDevMode(!isDevMode)} />
@@ -161,36 +187,36 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         </label>
                     </div>
                     <div className="p-3 bg-gray-700 rounded-lg">
-                        <label htmlFor="api-key-input" className="block font-medium text-white mb-1 text-sm sm:text-base">{t.customApiKey}</label>
+                        <label htmlFor="api-key-input" className="block font-medium text-white mb-1 text-sm sm:text-base">{F('customApiKey')}</label>
                         <div className="flex items-center space-x-2">
                             <input
                                 id="api-key-input"
                                 type="password"
                                 value={customApiKey}
                                 onChange={(e) => onCustomApiKeyChange(e.target.value)}
-                                placeholder={t.customApiKeyPlaceholder}
+                                placeholder={F('customApiKeyPlaceholder')}
                                 className="flex-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-sm text-white focus:ring-2 focus:ring-green-500 focus:outline-none"
                             />
                             <button
                                 onClick={onResetApiKey}
                                 className="bg-gray-600 hover:bg-gray-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2 px-3 rounded-md text-sm whitespace-nowrap transition-colors flex-shrink-0"
                                 disabled={!isUsingCustomKey}
-                                title={isUsingCustomKey ? t.resetToDefault : 'Already using default key'}
+                                title={isUsingCustomKey ? F('resetToDefault') : 'Already using default key'}
                             >
                                 ↺
                             </button>
                         </div>
-                        <p className="text-xs text-gray-400 mt-1">{t.customApiKeyDesc}</p>
+                        <p className="text-xs text-gray-400 mt-1">{F('customApiKeyDesc')}</p>
                     </div>
                     <div className="p-3 bg-gray-700 rounded-lg">
-                         <button onClick={onClearTranscript} className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md transition-colors text-sm sm:text-base">{t.clearTranscript}</button>
+                         <button onClick={onClearTranscript} className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md transition-colors text-sm sm:text-base">{F('clearTranscript')}</button>
                     </div>
                     <div className="p-3 bg-gray-700 rounded-lg">
-                         <button onClick={() => setShowSaveOptions(prev => !prev)} className="w-full bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-md transition-colors text-sm sm:text-base">{t.saveConversation}...</button>
+                         <button onClick={() => setShowSaveOptions(prev => !prev)} className="w-full bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-md transition-colors text-sm sm:text-base">{F('saveConversation')}...</button>
                          {showSaveOptions && (
                             <div className="flex space-x-2 mt-2">
-                                <button onClick={onSaveConversation} className="flex-1 bg-gray-500 hover:bg-gray-400 text-white font-bold py-2 px-3 sm:px-4 rounded-md transition-colors text-xs sm:text-sm">{copyButtonText === 'convo-copy' ? t.copied : t.copyText}</button>
-                                <button onClick={() => onSavePdf?.()} className="flex-1 bg-gray-500 hover:bg-gray-400 text-white font-bold py-2 px-3 sm:px-4 rounded-md transition-colors text-xs sm:text-sm">{t.saveAsPdf}</button>
+                                <button onClick={onSaveConversation} className="flex-1 bg-gray-500 hover:bg-gray-400 text-white font-bold py-2 px-3 sm:px-4 rounded-md transition-colors text-xs sm:text-sm">{copyButtonText === 'convo-copy' ? F('copied') : F('copyText')}</button>
+                                <button onClick={() => onSavePdf?.()} className="flex-1 bg-gray-500 hover:bg-gray-400 text-white font-bold py-2 px-3 sm:px-4 rounded-md transition-colors text-xs sm:text-sm">{F('saveAsPdf')}</button>
                             </div>
                          )}
                     </div>
@@ -200,17 +226,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                 onClick={handleExportSettings}
                                 className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md transition-colors text-sm sm:text-base"
                             >
-                                {t.exportSettings}
+                                {F('exportSettings')}
                             </button>
                             <label className="flex-1 bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-md transition-colors cursor-pointer text-center text-sm sm:text-base">
-                                {t.importSettings}
+                                {F('importSettings')}
                                 <input type="file" className="hidden" accept=".json" onChange={handleImportSettings} />
                             </label>
                         </div>
                     </div>
                 </div>
                  <div className="mt-4 sm:mt-6 text-center">
-                    <button onClick={onClose} className="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-5 sm:px-6 rounded-md transition-colors text-sm sm:text-base">{t.cancel}</button>
+                    <button onClick={onClose} className="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-5 sm:px-6 rounded-md transition-colors text-sm sm:text-base">{F('cancel')}</button>
                 </div>
             </div>
         </div>
