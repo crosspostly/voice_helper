@@ -7,13 +7,7 @@ interface WakeLockSentinel {
   removeEventListener: (event: string, handler: () => void) => void;
 }
 
-declare global {
-  interface Navigator {
-    wakeLock?: {
-      request: (type: 'screen') => Promise<WakeLockSentinel>;
-    };
-  }
-}
+// Type conflicts resolved by casting to any
 
 export const useWakeLock = () => {
   const [isActive, setIsActive] = useState(false);
@@ -24,8 +18,8 @@ export const useWakeLock = () => {
   const requestWakeLock = async () => {
     try {
       // Modern Wake Lock API (Android Chrome, Edge, Firefox)
-      if ('wakeLock' in navigator && navigator.wakeLock) {
-        wakeLockRef.current = await navigator.wakeLock.request('screen');
+      if ('wakeLock' in navigator && (navigator as any).wakeLock) {
+        wakeLockRef.current = await (navigator as any).wakeLock.request('screen');
         log('[Wake Lock] Screen Wake Lock activated', 'INFO');
         
         wakeLockRef.current.addEventListener('release', () => {
