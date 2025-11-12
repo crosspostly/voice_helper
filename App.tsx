@@ -1,13 +1,17 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { GoogleGenAI, Chat, Modality, Content } from '@google/genai';
 import { Transcript, Assistant } from './types';
-import { decode, decodeAudioData } from './services/audioUtils';
-import { useLiveSession, Status } from './hooks/useLiveSession';
-import { StatusIndicator } from './components/StatusIndicator';
-import { ProgressCard } from './components/ProgressCard';
-import { ServiceStatusIndicator } from './components/ServiceStatusIndicator';
-import { SettingsModal } from './components/SettingsModal';
-import { PersonaInfoModal } from './components/PersonaInfoModal';
+import { decode, decodeAudioData } from './src/services/audioUtils';
+import { useLiveSession, Status } from './src/hooks/useLiveSession';
+import { useLogger } from './src/hooks/useLogger';
+import { usePersistentState } from './src/hooks/usePersistentState';
+import { useWakeLock } from './src/hooks/useWakeLock';
+import { useAutoReconnectTimer } from './src/hooks/useAutoReconnectTimer';
+import { StatusIndicator } from './src/components/StatusIndicator';
+import { ProgressCard } from './src/components/ProgressCard';
+import { ServiceStatusIndicator } from './src/components/ServiceStatusIndicator';
+import { SettingsModal } from './src/components/SettingsModal';
+import { PersonaInfoModal } from './src/components/PersonaInfoModal';
 
 type Language = 'en' | 'ru';
 type PersonaView = 'select' | 'edit' | 'add';
@@ -222,55 +226,45 @@ const transcriptToHistory = (transcript: Transcript[]): Content[] => {
 };
 
 export const App: React.FC = () => {
-  const [transcript, setTranscript] = useState<Transcript[]>(() => {
-    try {
-        const stored = localStorage.getItem('transcript');
-        return stored ? JSON.parse(stored) : [];
-    } catch (e) {
-        console.error("Failed to load transcript from localStorage", e);
-        return [];
-    }
-  });
+  const [transcript, setTranscript] = usePersistentState<Transcript[]>('transcript', []);
   
-  const [customAssistants, setCustomAssistants] = useState<Assistant[]>(() => {
-    try {
-        const stored = localStorage.getItem('assistants');
-        return stored ? JSON.parse(stored) : [];
-    } catch (e) {
-        console.error("Failed to load custom assistants from localStorage", e);
-        return [];
-    }
-  });
+  const [customAssistants, setCustomAssistants] = usePersistentState<Assistant[]>('assistants', []);
   
-  const [customApiKey, setCustomApiKey] = useState<string>(() => {
-    try {
-        const savedKey = localStorage.getItem('customApiKey');
-        if (savedKey) {
-            return savedKey;
-        }
-        // Use default key if no custom key is set
-        return DEFAULT_GEMINI_API_KEY;
-    } catch (e) {
-        console.error("Failed to read customApiKey from localStorage", e);
-        return DEFAULT_GEMINI_API_KEY;
-    }
-  });
+  const [customApiKey, setCustomApiKey] = usePersistentState<string>('customApiKey', DEFAULT_GEMINI_API_KEY);
 
-  const [selectedAssistantId, setSelectedAssistantId] = useState<string>('');
-  const [selectedVoice, setSelectedVoice] = useState<string>(() => localStorage.getItem('selectedVoice') || VOICES[0]);
-  const [speakingRate, setSpeakingRate] = useState<string>(() => localStorage.getItem('speakingRate') || '1.0');
-  const [pitch, setPitch] = useState<string>(() => localStorage.getItem('pitch') || '0');
-  const [lang, setLang] = useState<Language>(() => (localStorage.getItem('language') as Language) || 'en');
+  const [selectedAssistantId, setSelectedAssistantId] = usePersistentState<string>('selectedAssistantId', '');
+  const [selectedVoice, setSelectedVoice] = usePersistentState<string>('selectedVoice', VOICES[0]);
+  const [speakingRate, setSpeakingRate] = usePersistentState<string>('speakingRate', '1.0');
+  const [pitch, setPitch] = usePersistentState<string>('pitch', '0');
+  const [lang, setLang] = usePersistentState<Language>('language', 'en');
   const [personaView, setPersonaView] = useState<PersonaView>('select');
   const [editingPersona, setEditingPersona] = useState<Partial<Assistant> | null>(null);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isPersonaInfoModalOpen, setIsPersonaInfoModalOpen] = useState(false);
   const [isPanelVisible, setIsPanelVisible] = useState(false);
   
-  const [logs, setLogs] = useState<string[]>([]);
-  const [showLogs, setShowLogs] = useState(false);
   const [numMessagesToDisplay, setNumMessagesToDisplay] = useState(50);
-  const [isDevMode, setIsDevMode] = useState(() => localStorage.getItem('isDevMode') === 'true');
+  const [isDevMode, setIsDevMode] = usePersistentState<boolean>('isDevMode', false);
+  const [showLogs, setShowLogs] = useState(false);
+  
+  // Initialize logger
+  const { logs, log, clearLogs } = useLogger({ 
+    enablePersistence: true, 
+    minLevel: isDevMode ? 'DEBUG' : 'INFO' 
+  });
+  
+  // Initialize wake lock for mobile reliability
+  const { requestWakeLock, releaseWakeLock, isActive: isWakeLockActive } = useWakeLock();
+  
+  // Initialize auto-reconnect timer
+  const { 
+    sessionTimeLeft, 
+    isActive: isTimerActive, 
+    shouldReconnect, 
+    startTimer, 
+    stopTimer, 
+    resetTimer 
+  } = useAutoReconnectTimer();
 
   const [textInputValue, setTextInputValue] = useState('');
   const [copyButtonText, setCopyButtonText] = useState('');
@@ -285,39 +279,25 @@ export const App: React.FC = () => {
   const ai = useGemini(customApiKey);
   const t = I18N[lang];
 
-  const log = useCallback((message: string, level: 'INFO' | 'ERROR' | 'DEBUG' = 'DEBUG') => {
-    const fullMessage = `[${new Date().toLocaleTimeString()}] ${message}`;
-    if (level === 'ERROR') {
-        console.error(fullMessage);
-    } else {
-        console.log(fullMessage);
-    }
-    
-    if (level === 'ERROR' || level === 'INFO' || isDevMode) {
-        setLogs(prev => [...prev.slice(-100), fullMessage]);
-    }
-  }, [isDevMode]);
+  // Old log function replaced by useLogger hook
   
   const handleCustomApiKeyChange = useCallback((key: string) => {
     try {
         if (key && key.trim()) {
-            localStorage.setItem('customApiKey', key);
             setCustomApiKey(key);
         } else {
             // If empty, reset to default
-            localStorage.removeItem('customApiKey');
             setCustomApiKey(DEFAULT_GEMINI_API_KEY);
         }
     } catch (e) {
-        log('Failed to save custom API key to localStorage', 'ERROR');
+        log('Failed to save custom API key', 'ERROR');
     }
-  }, [log]);
+  }, [log, setCustomApiKey]);
 
   const handleResetApiKey = useCallback(() => {
-    localStorage.removeItem('customApiKey');
     setCustomApiKey(DEFAULT_GEMINI_API_KEY);
     log(t.resetKeySuccess, 'INFO');
-  }, [log, t]);
+  }, [log, t, setCustomApiKey]);
 
   const stopPlayback = useCallback(() => {
     if (sourcesRef.current.size > 0) {
@@ -390,6 +370,33 @@ export const App: React.FC = () => {
     }
   }, [log, isSessionActive, setStatus]);
 
+  // Enhanced session management with wake lock and auto-reconnect
+  const handleStartSession = useCallback(async () => {
+    log('Starting session with wake lock and timer', 'INFO');
+    await requestWakeLock();
+    startTimer();
+    return startSession();
+  }, [log, requestWakeLock, startTimer, startSession]);
+
+  const handleStopSession = useCallback(async (isRestarting = false) => {
+    log('Stopping session and releasing wake lock', 'INFO');
+    await releaseWakeLock();
+    stopTimer();
+    return stopSession(isRestarting);
+  }, [log, releaseWakeLock, stopTimer, stopSession]);
+
+  // Auto-reconnect logic
+  useEffect(() => {
+    if (shouldReconnect() && isSessionActive) {
+      log('Auto-reconnecting session after 4.5 minutes', 'INFO');
+      handleStopSession(true).then(() => {
+        setTimeout(() => {
+          handleStartSession();
+        }, 1000);
+      });
+    }
+  }, [shouldReconnect, isSessionActive, handleStopSession, handleStartSession, log]);
+
   useEffect(() => {
     playAudioRef.current = playAudio;
   }, [playAudio]);
@@ -418,13 +425,7 @@ export const App: React.FC = () => {
     }
   }, [log]);
 
-  useEffect(() => {
-    try {
-      localStorage.setItem('language', lang);
-    } catch (e) {
-      log("Error saving language to localStorage", 'ERROR');
-    }
-  }, [lang, log]);
+  // Language state is now managed by usePersistentState
 
   const allAssistants = useMemo(() => {
     const presets = PRESET_ASSISTANTS.map((p, i) => ({ ...p, id: `preset-${i}` }));
@@ -434,13 +435,7 @@ export const App: React.FC = () => {
   const presetAssistants = useMemo(() => allAssistants.filter(a => a.id.startsWith('preset-')), [allAssistants]);
   const userCustomAssistants = useMemo(() => allAssistants.filter(a => !a.id.startsWith('preset-')), [allAssistants]);
 
-  useEffect(() => {
-    try {
-        localStorage.setItem('assistants', JSON.stringify(customAssistants));
-    } catch (e) {
-        log("Error saving custom assistants to localStorage", 'ERROR');
-    }
-  }, [customAssistants, log]);
+  // Custom assistants state is now managed by usePersistentState
 
   useEffect(() => {
       const storedId = localStorage.getItem('selectedAssistantId');
@@ -467,44 +462,24 @@ export const App: React.FC = () => {
         setPersonaView('add');
     } else {
         setSelectedAssistantId(value);
-        try {
-            localStorage.setItem('selectedAssistantId', value);
-        } catch (err) {
-            log(`Failed to save selectedAssistantId: ${(err as Error).message}`, 'ERROR');
-        }
         chatRef.current = null;
     }
-  }, [log]);
+  }, [setSelectedAssistantId]);
   
   const handleVoiceChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
     const newVoice = e.target.value;
     setSelectedVoice(newVoice);
-    try {
-        localStorage.setItem('selectedVoice', newVoice);
-    } catch (err) {
-        log(`Failed to save selectedVoice: ${(err as Error).message}`, 'ERROR');
-    }
-  }, [log]);
+  }, [setSelectedVoice]);
 
   const handleSpeakingRateChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const newRate = e.target.value;
     setSpeakingRate(newRate);
-    try {
-        localStorage.setItem('speakingRate', newRate);
-    } catch (err) {
-        log(`Failed to save speakingRate: ${(err as Error).message}`, 'ERROR');
-    }
-  }, [log]);
+  }, [setSpeakingRate]);
 
   const handlePitchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const newPitch = e.target.value;
     setPitch(newPitch);
-    try {
-        localStorage.setItem('pitch', newPitch);
-    } catch (err) {
-        log(`Failed to save pitch: ${(err as Error).message}`, 'ERROR');
-    }
-  }, [log]);
+  }, [setPitch]);
 
   const playText = async (text: string) => {
     if (!text || !text.trim()) {
@@ -588,7 +563,7 @@ export const App: React.FC = () => {
         return;
     }
 
-    if (status !== 'IDLE') await stopSession(false);
+    if (status !== 'IDLE') await handleStopSession(false);
 
     setTextInputValue('');
     setTranscript(prev => [...prev, { speaker: 'You', text, isFinal: true }]);
@@ -647,11 +622,6 @@ export const App: React.FC = () => {
         };
         setCustomAssistants(prev => [...prev, newAssistant]);
         setSelectedAssistantId(newAssistant.id);
-        try {
-            localStorage.setItem('selectedAssistantId', newAssistant.id);
-        } catch(e) {
-            log('Failed to save selectedAssistantId to localStorage', 'ERROR');
-        }
     }
 
     chatRef.current = null;
@@ -667,11 +637,6 @@ export const App: React.FC = () => {
     if (selectedAssistantId === idToDelete) {
         const firstPresetId = allAssistants.find(a => a.id.startsWith('preset-'))?.id || '';
         setSelectedAssistantId(firstPresetId);
-        try {
-            localStorage.setItem('selectedAssistantId', firstPresetId);
-        } catch(e) {
-            log('Failed to save selectedAssistantId to localStorage', 'ERROR');
-        }
     }
 
     setPersonaView('select');
@@ -724,9 +689,9 @@ export const App: React.FC = () => {
       stopPlayback();
       setStatus('LISTENING');
     } else if (status === 'IDLE' || status === 'ERROR') {
-      startSession();
+      handleStartSession();
     } else {
-      stopSession(false);
+      handleStopSession(false);
     }
   };
   
@@ -925,17 +890,23 @@ export const App: React.FC = () => {
           </div>
 
           <div className="mt-4 pt-4 border-t border-gray-700">
-             <div className="flex items-center space-x-2">
-                <StatusIndicator status={status} t={t} />
-                {selectedAssistant.isLinguisticsService && (
-                  <ServiceStatusIndicator
-                    isAvailable={linguisticsSession.sessionState.serviceAvailable}
-                    isLoading={linguisticsSession.sessionState.isLoading}
-                    error={linguisticsSession.sessionState.error}
-                  />
-                )}
-             </div>
-          </div>
+                       <div className="flex items-center space-x-2">
+                           <StatusIndicator status={status} t={t} />
+                           {selectedAssistant.isLinguisticsService && (
+                             <ServiceStatusIndicator
+                               isAvailable={linguisticsSession.sessionState.serviceAvailable}
+                               isLoading={linguisticsSession.sessionState.isLoading}
+                               error={linguisticsSession.sessionState.error}
+                             />
+                           )}
+                           {isWakeLockActive && (
+                             <span className="text-xs bg-green-600 px-2 py-1 rounded">🔒 Wake Lock</span>
+                           )}
+                           {isTimerActive && (
+                             <span className="text-xs bg-blue-600 px-2 py-1 rounded">⏱️ {Math.floor(sessionTimeLeft / 60)}:{(sessionTimeLeft % 60).toString().padStart(2, '0')}</span>
+                           )}
+                       </div>
+                    </div>
 
           <div className="mt-4 pt-4 border-t border-gray-700 flex items-center space-x-2">
             <input 
@@ -965,11 +936,11 @@ export const App: React.FC = () => {
                       <span className="font-semibold">{t.logs}</span>
                       <span className="transform transition-transform">{showLogs ? '▼' : '▶'}</span>
                    </div>
-                   {showLogs && <button onClick={(e) => { e.stopPropagation(); setLogs([]); }} className="hover:text-white px-2 py-0.5 rounded">{t.clearLogs}</button>}
+                   {showLogs && <button onClick={(e) => { e.stopPropagation(); clearLogs(); }} className="hover:text-white px-2 py-0.5 rounded">{t.clearLogs}</button>}
                </div>
               {showLogs && (
                   <pre className="mt-1 bg-gray-900 p-2 rounded-md overflow-x-auto h-24 border border-gray-700">
-                  {logs.join('\n')}
+                  {logs.map(log => `[${log.timestamp}] [${log.level}] ${log.message}`).join('\n')}
                   </pre>
               )}
           </div>
