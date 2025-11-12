@@ -1,0 +1,27 @@
+[33mcommit 9ab7cc76bfec319dc029db5c037b55f495a522b7[m
+Merge: dd27d83 fc48086
+Author: crosspostly <shekhovpavel@gmail.com>
+Date:   Mon Nov 10 08:04:28 2025 +0300
+
+    Merge pull request #8 from crosspostly/feat-integrate-linguistics-assistant-api-client-retry-baseurl-persona-routing-live-session-streaming-progress-cards-tests
+    
+    Integrate Linguistics Assistant UI and Backend Routing
+
+ .env.example                          |   16 [32m+[m
+ App.tsx                               |   68 [32m+[m[31m-[m
+ components/ProgressCard.tsx           |  144 [32m++++[m
+ components/ServiceStatusIndicator.tsx |   59 [32m++[m
+ docs/LINGUISTICS_INTEGRATION.md       |  217 [32m+++++[m
+ hooks/useLinguisticsSession.ts        |  291 [32m+++++++[m
+ hooks/useLiveSession.ts               |   67 [32m+[m[31m-[m
+ package-lock.json                     | 1467 [32m++++++++++++++++++++++++++++++[m[31m---[m
+ package.json                          |   14 [32m+[m[31m-[m
+ services/linguisticsApi.ts            |  285 [32m+++++++[m
+ services/mockLinguisticsService.ts    |  274 [32m++++++[m
+ tests/ProgressCard.test.tsx           |  184 [32m+++++[m
+ tests/linguisticsApi.test.ts          |  220 [32m+++++[m
+ tests/setup.ts                        |    1 [32m+[m
+ tests/useLinguisticsSession.test.tsx  |  375 [32m+++++++++[m
+ types.ts                              |   21 [32m+[m[31m-[m
+ vite.config.ts                        |    5 [32m+[m
+ 17 files changed, 3591 insertions(+), 117 deletions(-)
