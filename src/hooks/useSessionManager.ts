@@ -1,0 +1,275 @@
+import { useState, useCallback, useMemo, useEffect } from 'react';
+import { GoogleGenAI } from '@google/genai';
+import { Assistant, Transcript } from '../types';
+import { TranscriptService } from '../services/transcriptService';
+import { GeminiService } from '../services/geminiService';
+import { useLiveSession, Status } from './useLiveSession';
+import { useAutoReconnectTimer } from './useAutoReconnectTimer';
+import { useTranscript } from './useTranscript';
+import { useLogger } from './useLogger';
+import { useAudioEngine } from './useAudioEngine';
+import { useLanguageManager } from './useLanguageManager';
+import { useWakeLock } from './useWakeLock';
+
+interface UseSessionManagerOptions {
+  customApiKey?: string | null;
+  defaultApiKey?: string;
+  userId?: string;
+}
+
+interface UseSessionManagerReturn {
+  // Session state
+  status: Status;
+  isActive: boolean;
+  timeLeft: number;
+  reconnecting: boolean;
+  errorState: string | null;
+  selectedAssistant: Assistant | null;
+  
+  // Session actions
+  start: (assistant: Assistant) => Promise<void>;
+  stop: () => Promise<void>;
+  restart: () => Promise<void>;
+  
+  // Communication actions
+  sendText: (text: string) => Promise<void>;
+  sendStructuredMessage: (message: any) => Promise<void>;
+  
+  // Configuration
+  setSelectedAssistant: (assistant: Assistant) => void;
+  setVoice: (voice: string) => void;
+  
+  // Sub-hooks access
+  transcript: ReturnType<typeof useTranscript>;
+  audioEngine: ReturnType<typeof useAudioEngine>;
+  logger: ReturnType<typeof useLogger>;
+  languageManager: ReturnType<typeof useLanguageManager>;
+  wakeLock: {
+    isActive: boolean;
+  };
+}
+
+/**
+ * High-level hook for managing live sessions with auto-reconnect
+ */
+export function useSessionManager(options: UseSessionManagerOptions = {}): UseSessionManagerReturn {
+  const { 
+    customApiKey, 
+    defaultApiKey = 'AIzaSyCrPJN5yn3QAmHEydsmQ8XK_vQPCJvamSA',
+    userId = 'user-1'
+  } = options;
+
+  // Core hooks
+  const logger = useLogger({ enablePersistence: process.env.NODE_ENV === 'development' });
+  const transcript = useTranscript();
+  const audioEngine = useAudioEngine();
+  const timer = useAutoReconnectTimer();
+  const languageManager = useLanguageManager();
+  const { requestWakeLock, releaseWakeLock, isActive: isWakeLockActive } = useWakeLock();
+  
+  // State
+  const [selectedAssistant, setSelectedAssistant] = useState<Assistant | null>(null);
+  const [selectedVoice, setSelectedVoice] = useState<string>('Zephyr');
+  const [reconnecting, setReconnecting] = useState(false);
+  const [errorState, setErrorState] = useState<string | null>(null);
+
+  // Gemini service
+  const geminiService = useMemo(() => {
+    const apiKey = customApiKey || defaultApiKey;
+    if (!apiKey) {
+      return null;
+    }
+    try {
+      return GeminiService.create(apiKey);
+    } catch (error) {
+      return null;
+    }
+  }, [customApiKey, defaultApiKey]);
+
+  const ai = useMemo(() => {
+    const apiKey = customApiKey || defaultApiKey;
+    if (!apiKey) {
+      return null;
+    }
+    try {
+      return new GoogleGenAI({ apiKey });
+    } catch (error) {
+      return null;
+    }
+  }, [customApiKey, defaultApiKey]);
+
+  // Log errors in useEffect instead of useMemo to prevent re-renders
+  useEffect(() => {
+    const apiKey = customApiKey || defaultApiKey;
+    if (!apiKey) {
+      logger.log('No API key provided for Gemini service', 'ERROR');
+    }
+  }, [customApiKey, defaultApiKey, logger]);
+
+  // Live session hook
+  const { 
+    status, 
+    startSession, 
+    stopSession, 
+    isSessionActive, 
+    setStatus,
+    sendTextMessage,
+  } = useLiveSession({
+    ai,
+    selectedAssistant: selectedAssistant || { id: '', prompt: '' },
+    selectedVoice,
+    userId,
+    setTranscript: transcript.setTranscript,
+    transcript: transcript.transcript,
+    playAudio: audioEngine.playBase64Audio,
+    stopPlayback: audioEngine.stopAll,
+    log: logger.log,
+    onResponseComplete: useCallback(() => {
+      if (timer.shouldReconnect()) {
+        logger.log('⏰ Session age ≥ 4.5 min, triggering auto-reconnect...', 'INFO');
+        // Trigger auto-reconnect
+        setTimeout(() => triggerAutoReconnect(), 0);
+      }
+    }, [timer]),
+  });
+
+  // Auto-reconnect logic
+  const triggerAutoReconnect = useCallback(async () => {
+    if (status !== 'LISTENING' && status !== 'IDLE') {
+      logger.log('Auto-reconnect skipped (Gemini speaking)', 'DEBUG');
+      return;
+    }
+    
+    logger.log('🔄 Auto-reconnect: Refreshing session to prevent timeout...', 'INFO');
+    setReconnecting(true);
+    
+    try {
+      await stopSession(false);
+      await new Promise(resolve => setTimeout(resolve, 300));
+      await startSession();
+      timer.resetTimer();
+      logger.log('✅ Auto-reconnect: New session started', 'INFO');
+    } catch (error) {
+      logger.log(`Auto-reconnect failed: ${error}`, 'ERROR');
+      setErrorState('Auto-reconnect failed');
+    } finally {
+      setReconnecting(false);
+    }
+  }, [status, stopSession, startSession, timer, logger]);
+
+  // Session actions
+  const start = useCallback(async (assistant: Assistant) => {
+    try {
+      setErrorState(null);
+      setSelectedAssistant(assistant);
+      timer.startTimer();
+      
+      // Activate Wake Lock before starting audio session
+      await requestWakeLock();
+      
+      if (assistant.isLinguisticsService) {
+        // Use linguistics session - for now just log it
+        logger.log('Linguistics service was requested but is removed', 'WARN');
+      }
+      
+      await startSession();
+      logger.log('Session started with Wake Lock active', 'INFO');
+    } catch (error) {
+      logger.log(`Failed to start session: ${error}`, 'ERROR');
+      setErrorState('Failed to start session');
+      timer.stopTimer();
+      await releaseWakeLock(); // Cleanup if startup fails
+    }
+  }, [startSession, timer, logger, requestWakeLock, releaseWakeLock]);
+
+  const stop = useCallback(async () => {
+    try {
+      setErrorState(null);
+      await stopSession();
+      timer.stopTimer();
+      
+      // Release Wake Lock after session ends
+      await releaseWakeLock();
+      
+      logger.log('Session stopped, Wake Lock released', 'INFO');
+    } catch (error) {
+      logger.log(`Error stopping session: ${error}`, 'ERROR');
+      setErrorState('Failed to stop session');
+      // Attempt cleanup anyway
+      await releaseWakeLock();
+    }
+  }, [stopSession, timer, logger, releaseWakeLock]);
+
+  const restart = useCallback(async () => {
+    if (!selectedAssistant) {
+      logger.log('Cannot restart: no assistant selected', 'ERROR');
+      return;
+    }
+    
+    logger.log('Restarting session...', 'INFO');
+    await stop();
+    await new Promise(resolve => setTimeout(resolve, 500));
+    await start(selectedAssistant);
+  }, [selectedAssistant, stop, start, logger]);
+
+  // Communication actions
+  const sendText = useCallback(async (text: string) => {
+    try {
+      if (selectedAssistant?.isLinguisticsService) {
+        // Linguistics was removed in hotfix #18
+        logger.log('Linguistics service removed - falling back to regular session', 'WARN');
+        transcript.addMessage('You', text);
+      } else {
+        // Regular Gemini session - text would be handled by live session
+        await sendTextMessage(text);
+        transcript.addMessage('You', text);
+        logger.log(`Text sent: ${text}`, 'DEBUG');
+      }
+    } catch (error) {
+      logger.log(`Failed to send text: ${error}`, 'ERROR');
+      setErrorState('Failed to send message');
+    }
+  }, [selectedAssistant, sendTextMessage, transcript, logger]);
+
+  const sendStructuredMessage = useCallback(async (message: any) => {
+    try {
+      // This would send structured data to the session
+      logger.log(`Structured message sent: ${JSON.stringify(message)}`, 'DEBUG');
+    } catch (error) {
+      logger.log(`Failed to send structured message: ${error}`, 'ERROR');
+      setErrorState('Failed to send message');
+    }
+  }, [logger]);
+
+  return {
+    // Session state
+    status,
+    isActive: isSessionActive && timer.isActive,
+    timeLeft: timer.sessionTimeLeft,
+    reconnecting,
+    errorState,
+    selectedAssistant,
+    
+    // Session actions
+    start,
+    stop,
+    restart,
+    
+    // Communication actions
+    sendText,
+    sendStructuredMessage,
+    
+    // Configuration
+    setSelectedAssistant,
+    setVoice: setSelectedVoice,
+    
+    // Sub-hooks access
+    transcript,
+    audioEngine,
+    logger,
+    languageManager,
+    wakeLock: {
+      isActive: isWakeLockActive,
+    },
+  };
+}

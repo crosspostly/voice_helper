@@ -1,0 +1,7 @@
+{
+  "name": "Live Voice Assistant",
+  "description": "A simple application for real-time voice conversations with an AI assistant. Set a system instruction and start talking.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}

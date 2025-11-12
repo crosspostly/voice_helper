@@ -1,0 +1,56 @@
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: [
+    "./index.html",
+    "./src/**/*.{js,ts,jsx,tsx}",
+  ],
+  safelist: [
+    'bg-base',
+    'bg-grapefruit',
+    'bg-grapefruitDark',
+    'bg-accent',
+    'bg-accent2',
+    'bg-accentDark',
+    'bg-card',
+    'bg-cardDark',
+    'bg-grayBg',
+    'bg-grayCard',
+    'text-text',
+    'text-textDark',
+    'text-grayText',
+    'border-border',
+    'border-borderDark',
+    'border-grayBorder',
+    'rounded-card',
+    'shadow-card',
+  ],
+  theme: {
+    extend: {
+      colors: {
+        base: "#FFF8F5",
+        grapefruit: "#FEEADE",
+        accent: "#47B881",
+        accent2: "#F87171",
+        accentDark: "#2D7D5C",
+        grapefruitDark: "#F6D3BE",
+        card: "#FDF6ED",
+        cardDark: "#E8E0D5",
+        border: "#E9D6C7",
+        borderDark: "#C4B5A0",
+        text: "#3C2B1C",
+        textDark: "#1A1612",
+        grayBg: "#F5F5F5",
+        grayCard: "#FFFFFF",
+        grayBorder: "#D1D5DB",
+        grayText: "#374151",
+      },
+      boxShadow: {
+        card: "0 4px 24px rgba(60, 60, 60, 0.09)",
+      },
+      borderRadius: {
+        card: "1.5rem",
+      },
+    },
+  },
+  plugins: [],
+};
