@@ -400,32 +400,16 @@ export const App: React.FC = () => {
   useEffect(() => {
     playAudioRef.current = playAudio;
   }, [playAudio]);
-  
-  useEffect(() => {
-    try {
-        localStorage.setItem('transcript', JSON.stringify(transcript));
-    } catch (e) {
-        log("Error saving transcript to localStorage", 'ERROR');
-    }
-  }, [transcript, log]);
 
+  // Initialize language from browser preference if not already set
   useEffect(() => {
     const storedLang = localStorage.getItem('language');
-    if (storedLang) {
-      setLang(storedLang as Language);
-    } else {
+    if (!storedLang) {
       const browserLang = navigator.language.split('-')[0];
       const newLang = browserLang === 'ru' ? 'ru' : 'en';
       setLang(newLang);
-      try {
-        localStorage.setItem('language', newLang);
-      } catch (e) {
-        log("Error saving language to localStorage", 'ERROR');
-      }
     }
-  }, [log]);
-
-  // Language state is now managed by usePersistentState
+  }, [setLang]);
 
   const allAssistants = useMemo(() => {
     const presets = PRESET_ASSISTANTS.map((p, i) => ({ ...p, id: `preset-${i}` }));
@@ -436,16 +420,6 @@ export const App: React.FC = () => {
   const userCustomAssistants = useMemo(() => allAssistants.filter(a => !a.id.startsWith('preset-')), [allAssistants]);
 
   // Custom assistants state is now managed by usePersistentState
-
-  useEffect(() => {
-      const storedId = localStorage.getItem('selectedAssistantId');
-      if (storedId && allAssistants.some(a => a.id === storedId)) {
-        setSelectedAssistantId(storedId);
-      } else if (allAssistants.length > 0) {
-        const defaultId = allAssistants.find(a => a.id.startsWith('preset-'))?.id || '';
-        setSelectedAssistantId(defaultId);
-      }
-  }, [allAssistants]);
 
   useEffect(() => {
     if (transcriptEndRef.current) {
@@ -967,11 +941,6 @@ export const App: React.FC = () => {
         onClearTranscript={() => {
             log('Clearing transcript and resetting chat session.', 'INFO');
             setTranscript([]);
-            try {
-              localStorage.removeItem('transcript');
-            } catch(e) {
-              log('Failed to clear transcript from localStorage', 'ERROR');
-            }
             chatRef.current = null;
             setIsSettingsModalOpen(false);
         }}

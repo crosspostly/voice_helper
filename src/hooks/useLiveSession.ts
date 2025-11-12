@@ -3,6 +3,12 @@ import { GoogleGenAI, LiveServerMessage, Modality } from '@google/genai';
 import { createBlob } from '../services/audioUtils';
 import { Assistant, Transcript } from '../types';
 
+interface WakeLockSentinel {
+  release: () => Promise<void>;
+  addEventListener: (event: string, handler: () => void) => void;
+  removeEventListener: (event: string, handler: () => void) => void;
+}
+
 export type Status = 'IDLE' | 'CONNECTING' | 'LISTENING' | 'SPEAKING' | 'ERROR' | 'PROCESSING' | 'RECONNECTING';
 
 interface UseLiveSessionProps {
