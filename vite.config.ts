@@ -16,16 +16,13 @@ export default defineConfig(({ mode }) => {
       },
       resolve: {
         alias: {
-          '@': path.resolve(__dirname, './src'),
+          '@': path.resolve(__dirname, '.'),
         }
       },
       test: {
         globals: true,
         environment: 'jsdom',
         setupFiles: ['./tests/setup.ts'],
-      },
-      css: {
-        postcss: './postcss.config.js',
       }
     };
 });
