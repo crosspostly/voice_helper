@@ -76,7 +76,7 @@ export const ProgressCard: React.FC<ProgressCardProps> = ({
       {/* Context Used Indicator */}
       {contextUsed && (
         <div className="flex items-center space-x-2 text-sm text-accent">
-          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+          <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
             <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
           </svg>
           <span>Context-aware response using conversation history</span>
@@ -87,7 +87,7 @@ export const ProgressCard: React.FC<ProgressCardProps> = ({
       {progressUpdates.length > 0 && (
         <div>
           <h4 className="font-semibold text-text mb-3 flex items-center">
-            <svg className="w-5 h-5 mr-2 text-accent" fill="currentColor" viewBox="0 0 20 20">
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 mr-2 text-accent" fill="currentColor" viewBox="0 0 20 20">
               <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
               <path fillRule="evenodd" d="M4 5a2 2 0 012-2 1 1 0 000 2H6a2 2 0 00-2 2v6a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-1a1 1 0 100-2h1a4 4 0 014 4v6a4 4 0 01-4 4H6a4 4 0 01-4-4V7a4 4 0 014-4z" clipRule="evenodd" />
             </svg>
@@ -112,7 +112,7 @@ export const ProgressCard: React.FC<ProgressCardProps> = ({
       {exercises.length > 0 && (
         <div>
           <h4 className="font-semibold text-text mb-3 flex items-center">
-            <svg className="w-5 h-5 mr-2 text-accent" fill="currentColor" viewBox="0 0 20 20">
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 mr-2 text-accent" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
             </svg>
             Recommended Exercises
