@@ -9,52 +9,51 @@ import { metricsCollector } from '../services/proxyMetrics';
 // CRITICAL: Force WebSocket through proxy BEFORE any connections
 if (typeof globalThis !== 'undefined' && !((globalThis as any)._wsProxyPatched)) {
   const OriginalWebSocket = globalThis.WebSocket;
-  (globalThis as any).WebSocket = class extends OriginalWebSocket {
-    private startTime: number;
-    private useProxy: boolean;
-
-    constructor(url: string | URL, protocols?: string | string[]) {
-    let wsUrl = url.toString();
-    
-    // Prepare URL BEFORE calling super()
-    if (wsUrl.includes('generativelanguage.googleapis.com')) {
-      wsUrl = wsUrl.replace('wss://generativelanguage.googleapis.com', 'wss://subbot.sheepoff.workers.dev');
-    }
-    
-    // Call super() FIRST before accessing 'this'
-    super(wsUrl, protocols);
-    
-    // Now we can work with 'this'
-    this.useProxy = wsUrl !== url.toString();
-    this.startTime = performance.now();
-    
-    if (this.useProxy) {
-      console.log('🌐 WebSocket FORCED to proxy:', wsUrl);
-    }      
-      this.addEventListener('open', () => {
-        const duration = performance.now() - this.startTime;
+  
+  // Use Proxy instead of class extends to avoid constructor issues
+  (globalThis as any).WebSocket = new Proxy(OriginalWebSocket, {
+    construct(target, args) {
+      let [url, protocols] = args;
+      let useProxy = false;
+      let startTime = performance.now();
+      
+      // Transform URL before creating WebSocket
+      if (typeof url === 'string' && url.includes('generativelanguage.googleapis.com')) {
+        url = url.replace('wss://generativelanguage.googleapis.com', 'wss://subbot.sheepoff.workers.dev');
+        useProxy = true;
+        console.log('🌐 WebSocket FORCED to proxy:', url);
+      }
+      
+      // Create the original WebSocket with the transformed URL
+      const ws = new target(url, protocols);
+      
+      // Add metrics collection
+      const duration = performance.now() - startTime;
+      ws.addEventListener('open', () => {
         metricsCollector.recordMetric({
           timestamp: Date.now(),
-          type: this.useProxy ? 'proxy' : 'direct',
+          type: useProxy ? 'proxy' : 'direct',
           operation: 'websocket',
           success: true,
-          duration: Math.round(duration),
+          duration: Math.round(performance.now() - startTime),
         });
       });
 
-      this.addEventListener('error', (error: any) => {
-        const duration = performance.now() - this.startTime;
+      ws.addEventListener('error', (error: any) => {
         metricsCollector.recordMetric({
           timestamp: Date.now(),
-          type: this.useProxy ? 'proxy' : 'direct',
+          type: useProxy ? 'proxy' : 'direct',
           operation: 'websocket',
           success: false,
-          duration: Math.round(duration),
+          duration: Math.round(performance.now() - startTime),
           error: error.message || 'Unknown WebSocket error',
         });
       });
+      
+      return ws;
     }
-  };
+  });
+  
   (globalThis as any)._wsProxyPatched = true;
 }
 
@@ -104,10 +103,15 @@ export const useLiveSession = ({
   const keepAliveIntervalRef = useRef<number | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const isSessionActiveRef = useRef(false);
+  const statusRef = useRef<Status>('IDLE');
 
   useEffect(() => {
     isSessionActiveRef.current = isSessionActive;
   }, [isSessionActive]);
+
+  useEffect(() => {
+    statusRef.current = status;
+  }, [status]);
 
   const stopSession = useCallback(async (isRestarting = false) => {
     log(`stopSession called. isRestarting: ${isRestarting}`);
@@ -169,9 +173,10 @@ export const useLiveSession = ({
 
 
   const startSession = useCallback(async () => {
-    log(`🎤 startSession called. Current status: ${status}`);
-    if (status !== 'IDLE' && status !== 'ERROR' && status !== 'RECONNECTING') {
-      log(`startSession called with invalid status: ${status}. Aborting.`, 'INFO');
+    const currentStatus = statusRef.current;
+    log(`🎤 startSession called. Current status: ${currentStatus}`);
+    if (currentStatus !== 'IDLE' && currentStatus !== 'ERROR' && currentStatus !== 'RECONNECTING') {
+      log(`startSession called with invalid status: ${currentStatus}. Aborting.`, 'INFO');
       return;
     }
     if (!selectedAssistant) {
@@ -184,7 +189,8 @@ export const useLiveSession = ({
       setStatus('ERROR');
       return;
     }
-    if (status !== 'RECONNECTING') {
+    
+    if (currentStatus !== 'RECONNECTING') {
         log('Starting new session...', 'INFO');
         setStatus('CONNECTING');
     } else {
@@ -330,12 +336,7 @@ export const useLiveSession = ({
       setStatus('ERROR');
       setIsSessionActive(false);
     }
-  }, [ai, status, selectedAssistant, stopSession, playAudio, stopPlayback, selectedVoice, log, setTranscript, onResponseComplete]);
-
-  // Track when startSession function changes (for debugging)
-  useEffect(() => {
-    log('🎤 startSession function recreated');
-  }, [startSession]);
+  }, [ai, selectedAssistant, selectedVoice, log, setTranscript, onResponseComplete, playAudio, stopPlayback]);
 
   useEffect(() => {
     log('🎤 useLiveSession effect mounted');
