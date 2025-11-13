@@ -53,7 +53,9 @@ export function useSessionManager(options: UseSessionManagerOptions = {}) {
       globalThis.WebSocket = class extends OriginalWebSocket {
         constructor(url: string | URL, protocols?: string | string[]) {
           if (typeof url === 'string' && url.startsWith('wss://generativelanguage.googleapis.com')) {
-            url = url.replace('wss://generativelanguage.googleapis.com', WSS_PROXY_URL);
+// Extract path from original URL and prepend to proxy
+        const urlObj = new URL(url);
+        url = `${WSS_PROXY_URL}${urlObj.pathname}${urlObj.search}`;
           }
           super(url, protocols);
         }
