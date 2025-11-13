@@ -3,6 +3,26 @@ import { GoogleGenAI, LiveServerMessage, Modality } from '@google/genai';
 import { createBlob } from '../services/audioUtils';
 import { Assistant, Transcript } from '../types';
 
+
+// CRITICAL: Force WebSocket through proxy BEFORE any connections
+if (typeof globalThis !== 'undefined' && !((globalThis as any)._wsProxyPatched)) {
+  const OriginalWebSocket = globalThis.WebSocket;
+  (globalThis as any).WebSocket = class extends OriginalWebSocket {
+    constructor(url: string | URL, protocols?: string | string[]) {
+      let wsUrl = url.toString();
+      if (wsUrl.includes('generativelanguage.googleapis.com')) {
+        wsUrl = wsUrl.replace(
+          'wss://generativelanguage.googleapis.com',
+          'wss://subbot.sheepoff.workers.dev'
+        );
+        console.log('🌐 WebSocket FORCED to proxy:', wsUrl);
+      }
+      super(wsUrl, protocols);
+    }
+  };
+  (globalThis as any)._wsProxyPatched = true;
+}
+
 interface WakeLockSentinel {
   release: () => Promise<void>;
   addEventListener: (event: string, handler: () => void) => void;
