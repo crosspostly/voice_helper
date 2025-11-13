@@ -424,72 +424,67 @@ export const useLiveSession = ({
       setStatus('ERROR');
       setIsSessionActive(false);
     }
-  }, [ai, status, selectedAssistant, stopSession, playAudio, stopPlayback, selectedVoice, log, setTranscript]);
-
-  // Track when startSession function changes (for debugging)
-  useEffect(() => {
-    log('🎤 startSession function recreated');
-  }, [startSession]);
+  }, [ai, selectedAssistant, stopSession, playAudio, stopPlayback, selectedVoice, log, setTranscript, transcript]);
 
   useEffect(() => {
-    log('🎤 useLiveSession effect mounted');
+    console.log('🎤 useLiveSession effect mounted');
     return () => {
-      log('🎤 useLiveSession effect cleanup - checking session state');
+      console.log('🎤 useLiveSession effect cleanup - checking session state');
       if (isSessionActiveRef.current) {
-        log('Component unmounting, ensuring session is stopped.');
+        console.log('Component unmounting, ensuring session is stopped.');
         // Call cleanup directly without depending on stopSession to avoid re-renders
         (async () => {
           if (sessionPromiseRef.current) {
-            log('Closing existing session...');
+            console.log('Closing existing session...');
             try {
               const session = await sessionPromiseRef.current;
               session.close();
-              log('Session.close() called.');
+              console.log('Session.close() called.');
             } catch (e) {
-              log(`Error closing session: ${(e as Error).message}`, 'ERROR');
+              console.error(`Error closing session: ${(e as Error).message}`);
             }
             sessionPromiseRef.current = null;
           }
 
           if (audioWorkletNodeRef.current) {
-            log('Disconnecting AudioWorklet...');
+            console.log('Disconnecting AudioWorklet...');
             audioWorkletNodeRef.current.port.onmessage = null;
             audioWorkletNodeRef.current.disconnect();
             audioWorkletNodeRef.current = null;
           }
           if (mediaStreamSourceRef.current) {
-            log('Disconnecting media stream source...');
+            console.log('Disconnecting media stream source...');
             mediaStreamSourceRef.current.disconnect();
             mediaStreamSourceRef.current = null;
           }
           if (inputAudioContextRef.current && inputAudioContextRef.current.state !== 'closed') {
-            log('Closing input audio context...');
-            await inputAudioContextRef.current.close().catch(e => log(`Error closing input audio context: ${e.message}`, 'ERROR'));
+            console.log('Closing input audio context...');
+            await inputAudioContextRef.current.close().catch(e => console.error(`Error closing input audio context: ${e.message}`));
             inputAudioContextRef.current = null;
           }
 
           if (wakeLockRef.current) {
-            log('Releasing screen wake lock...');
+            console.log('Releasing screen wake lock...');
             await wakeLockRef.current.release();
             wakeLockRef.current = null;
-            log('Screen Wake Lock released.');
+            console.log('Screen Wake Lock released.');
           }
 
           if (keepAliveIntervalRef.current) {
             window.clearInterval(keepAliveIntervalRef.current);
             keepAliveIntervalRef.current = null;
-            log('Keep-alive interval cleared.');
+            console.log('Keep-alive interval cleared.');
           }
 
           setIsSessionActive(false);
           setStatus('IDLE');
-          log('Session cleanup completed.');
+          console.log('Session cleanup completed.');
         })();
       } else {
-        log('🎤 Cleanup: No active session to stop');
+        console.log('🎤 Cleanup: No active session to stop');
       }
     };
-  }, [log]);
+  }, []);
 
   // Function to handle text messages for linguistics assistants
   const sendTextMessage = useCallback(async (text: string) => {
