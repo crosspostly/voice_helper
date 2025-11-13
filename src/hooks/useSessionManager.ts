@@ -10,6 +10,8 @@ import { useLogger } from './useLogger';
 import { useAudioEngine } from './useAudioEngine';
 import { useLanguageManager } from './useLanguageManager';
 import { useWakeLock } from './useWakeLock';
+import { useGeoProxyDetection } from './useGeoProxyDetection';
+import { metricsCollector } from '../services/proxyMetrics';
 import { PROXY_CONFIG } from '../proxy';
 
 interface UseSessionManagerOptions {
@@ -33,14 +35,31 @@ export function useSessionManager(options: UseSessionManagerOptions = {}) {
   const timer = useAutoReconnectTimer();
   const languageManager = useLanguageManager();
   const { requestWakeLock, releaseWakeLock, isActive: isWakeLockActive } = useWakeLock();
+  const { proxyRequired: autoProxyEnabled } = useGeoProxyDetection();
 
-  // Proxy state (default: ON)
+  // Proxy state (default: ON, but can be overridden by auto-detection)
   const [useProxy, setUseProxy] = useState(true);
   const [autoDetectedBlock, setAutoDetectedBlock] = useState(false);
   const [selectedAssistant, setSelectedAssistant] = useState<Assistant | null>(null);
   const [selectedVoice, setSelectedVoice] = useState<string>('Zephyr');
   const [reconnecting, setReconnecting] = useState(false);
   const [errorState, setErrorState] = useState<string | null>(null);
+
+  // Если автодетект сказал что нужен прокси — включаем
+  useEffect(() => {
+    if (autoProxyEnabled) {
+      console.log('🔧 Auto-enabling proxy due to geo-block detection');
+      setUseProxy(true);
+      setAutoDetectedBlock(true);
+    }
+  }, [autoProxyEnabled]);
+
+  // Если пользователь ручно отключил прокси, когда он нужен — показываем предупреждение
+  useEffect(() => {
+    if (autoProxyEnabled && !useProxy) {
+      console.warn('⚠️ Proxy disabled but geo-blocking detected');
+    }
+  }, [autoProxyEnabled, useProxy]);
 
   // Gemini service instantiation with proxy, if enabled
   const ai = useMemo(() => {
@@ -51,15 +70,47 @@ export function useSessionManager(options: UseSessionManagerOptions = {}) {
       if (useProxy) {
         const originalFetch = globalThis.fetch;
         globalThis.fetch = ((url: any, options: any) => {
-          if (typeof url === 'string' && url.includes('generativelanguage.googleapis.com')) {
-            const proxiedUrl = url.replace(
+          const startTime = performance.now();
+          const isProxy =
+            typeof url === 'string' && url.includes('generativelanguage.googleapis.com');
+
+          let proxiedUrl = url;
+          if (isProxy) {
+            proxiedUrl = url.replace(
               'https://generativelanguage.googleapis.com',
               HTTP_PROXY_URL
             );
             console.log('🌐 HTTP proxied:', proxiedUrl);
-            return originalFetch(proxiedUrl, options);
           }
-          return originalFetch(url, options);
+
+          return originalFetch(proxiedUrl, options)
+            .then((response) => {
+              const duration = performance.now() - startTime;
+              metricsCollector.recordMetric({
+                timestamp: Date.now(),
+                type: useProxy && isProxy ? 'proxy' : 'direct',
+                operation: 'http',
+                success: response.ok,
+                duration: Math.round(duration),
+                responseSize: parseInt(
+                  response.headers.get('content-length') || '0',
+                  10
+                ),
+              });
+              return response;
+            })
+            .catch((error) => {
+              const duration = performance.now() - startTime;
+              metricsCollector.recordMetric({
+                timestamp: Date.now(),
+                type: useProxy && isProxy ? 'proxy' : 'direct',
+                operation: 'http',
+                success: false,
+                duration: Math.round(duration),
+                error: error.message,
+              });
+              throw error;
+            });
         }) as typeof fetch;
 
         const client = new GoogleGenAI({ apiKey });
