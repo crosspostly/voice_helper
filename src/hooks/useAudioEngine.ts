@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { decode, decodeAudioData } from '../services/audioUtils';
+import { metricsCollector } from '../services/proxyMetrics';
 
 interface UseAudioEngineOptions {
   sampleRate?: number;
@@ -69,17 +70,18 @@ export function useAudioEngine(options: UseAudioEngineOptions = {}): UseAudioEng
     base64Audio: string,
     options: AudioPlayOptions = {}
   ): Promise<void> => {
+    const startTime = performance.now();
     try {
       const ctx = await getAudioContext();
-      const { startTime, volume = 1.0 } = options;
+      const { startTime: optStartTime, volume = 1.0 } = options;
 
       // Decode base64 to audio data
       const audioData = decode(base64Audio);
       const audioBuffer = await decodeAudioData(audioData, ctx, sampleRate, numChannels);
 
       // Calculate start time for queuing
-      const actualStartTime = startTime !== undefined 
-        ? startTime 
+      const actualStartTime = optStartTime !== undefined 
+        ? optStartTime 
         : Math.max(ctx.currentTime, nextStartTimeRef.current);
 
       // Create and configure source
@@ -101,6 +103,17 @@ export function useAudioEngine(options: UseAudioEngineOptions = {}): UseAudioEng
       source.onended = () => {
         sourcesRef.current.delete(source);
         updatePlayingState();
+        
+        // Record successful audio playback metric
+        const duration = performance.now() - startTime;
+        metricsCollector.recordMetric({
+          timestamp: Date.now(),
+          type: 'direct', // Audio playback is always local
+          operation: 'tts',
+          success: true,
+          duration: Math.round(duration),
+          responseSize: base64Audio.length,
+        });
       };
 
       // Start playback
@@ -111,6 +124,18 @@ export function useAudioEngine(options: UseAudioEngineOptions = {}): UseAudioEng
     } catch (error) {
       console.error('Error playing audio:', error);
       setIsPlaying(false);
+      
+      // Record failed audio playback metric
+      const duration = performance.now() - startTime;
+      metricsCollector.recordMetric({
+        timestamp: Date.now(),
+        type: 'direct', // Audio playback is always local
+        operation: 'tts',
+        success: false,
+        duration: Math.round(duration),
+        error: error instanceof Error ? error.message : 'Unknown audio error',
+      });
+      
       throw error;
     }
   }, [getAudioContext, sampleRate, numChannels, updatePlayingState]);

@@ -3,20 +3,52 @@ import { GoogleGenAI, LiveServerMessage, Modality } from '@google/genai';
 import { createBlob } from '../services/audioUtils';
 import { Assistant, Transcript } from '../types';
 import { PROXY_CONFIG } from '../proxy';
+import { metricsCollector } from '../services/proxyMetrics';
 
 
 // CRITICAL: Force WebSocket through proxy BEFORE any connections
 if (typeof globalThis !== 'undefined' && !((globalThis as any)._wsProxyPatched)) {
   const OriginalWebSocket = globalThis.WebSocket;
   (globalThis as any).WebSocket = class extends OriginalWebSocket {
+    private startTime: number;
+    private useProxy: boolean;
+
     constructor(url: string | URL, protocols?: string | string[]) {
       let wsUrl = url.toString();
+      this.useProxy = false;
+      
       if (wsUrl.includes('generativelanguage.googleapis.com')) {
-        
-                  wsUrl = wsUrl.replace('wss://generativelanguage.googleapis.com/', 'wss://subbot.sheepoff.workers.dev/');
+        wsUrl = wsUrl.replace('wss://generativelanguage.googleapis.com/', 'wss://subbot.sheepoff.workers.dev/');
+        this.useProxy = true;
         console.log('🌐 WebSocket FORCED to proxy:', wsUrl);
       }
+      
+      this.startTime = performance.now();
       super(wsUrl, protocols);
+      
+      // Add event listeners for metrics
+      this.addEventListener('open', () => {
+        const duration = performance.now() - this.startTime;
+        metricsCollector.recordMetric({
+          timestamp: Date.now(),
+          type: this.useProxy ? 'proxy' : 'direct',
+          operation: 'websocket',
+          success: true,
+          duration: Math.round(duration),
+        });
+      });
+
+      this.addEventListener('error', (error: any) => {
+        const duration = performance.now() - this.startTime;
+        metricsCollector.recordMetric({
+          timestamp: Date.now(),
+          type: this.useProxy ? 'proxy' : 'direct',
+          operation: 'websocket',
+          success: false,
+          duration: Math.round(duration),
+          error: error.message || 'Unknown WebSocket error',
+        });
+      });
     }
   };
   (globalThis as any)._wsProxyPatched = true;
