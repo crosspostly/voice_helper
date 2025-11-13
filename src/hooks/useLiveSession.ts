@@ -18,7 +18,9 @@ if (typeof globalThis !== 'undefined' && !((globalThis as any)._wsProxyPatched))
       this.useProxy = false;
       
       if (wsUrl.includes('generativelanguage.googleapis.com')) {
-        wsUrl = wsUrl.replace('wss://generativelanguage.googleapis.com', 'wss://subbot.sheepoff.workers.dev');
+        // ИСПРАВЛЕНО: Убираем домен, оставляем путь, собираем правильный URL
+        const path = wsUrl.replace('wss://generativelanguage.googleapis.com', '');
+        wsUrl = `wss://subbot.sheepoff.workers.dev${path}`;
         this.useProxy = true;
         console.log('🌐 WebSocket FORCED to proxy:', wsUrl);
       }
