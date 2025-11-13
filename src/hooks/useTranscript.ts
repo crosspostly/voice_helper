@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useCallback, useRef, useMemo } from 'react';
 import { Transcript } from '../types';
 import { TranscriptService } from '../services/transcriptService';
 import { usePersistentState } from './usePersistentState';

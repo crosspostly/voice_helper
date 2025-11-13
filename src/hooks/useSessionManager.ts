@@ -150,7 +150,7 @@ export function useSessionManager(options: UseSessionManagerOptions = {}) {
     sendTextMessage,
   } = useLiveSession({
     ai,
-    selectedAssistant: selectedAssistant || { id: '', prompt: '' },
+    selectedAssistant,
     selectedVoice,
     userId,
     setTranscript: transcript.setTranscript,
@@ -190,6 +190,7 @@ export function useSessionManager(options: UseSessionManagerOptions = {}) {
 
   // Session actions (with proxy-aware retry)
   const start = useCallback(async (assistant: Assistant) => {
+    logger.log(`🎤 SessionManager.start called for assistant: ${assistant.titleKey || assistant.title}`);
     try {
       setErrorState(null);
       setSelectedAssistant(assistant);
@@ -198,6 +199,7 @@ export function useSessionManager(options: UseSessionManagerOptions = {}) {
       if (assistant.isLinguisticsService) {
         logger.log('Linguistics service was requested but is removed', 'WARN');
       }
+      logger.log('🎤 About to call startSession from SessionManager');
       await startSession();
       logger.log('Session started with Wake Lock active', 'INFO');
     } catch (error) {
@@ -215,6 +217,7 @@ export function useSessionManager(options: UseSessionManagerOptions = {}) {
   }, [startSession, timer, logger, requestWakeLock, releaseWakeLock, handleGeoBlockError]);
 
   const stop = useCallback(async () => {
+    logger.log('🎤 SessionManager.stop called');
     try {
       setErrorState(null);
       await stopSession();

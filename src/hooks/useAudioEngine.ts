@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { decode, decodeAudioData } from '../services/audioUtils';
 import { metricsCollector } from '../services/proxyMetrics';
 
@@ -55,7 +55,7 @@ export function useAudioEngine(options: UseAudioEngineOptions = {}): UseAudioEng
   // Update playing state based on active sources
   const updatePlayingState = useCallback(() => {
     const activeSources = Array.from(sourcesRef.current).filter(
-      source => source.playbackState !== 'finished'
+      (source: any) => source.playbackState !== 'finished'
     );
     setIsPlaying(activeSources.length > 0);
     
@@ -185,7 +185,7 @@ export function useAudioEngine(options: UseAudioEngineOptions = {}): UseAudioEng
     const samples = Math.floor(sampleRate * duration);
     const silentData = new Int16Array(samples);
     const bytes = new Uint8Array(silentData.buffer);
-    return btoa(String.fromCharCode(...bytes));
+    return btoa(String.fromCharCode.apply(null, bytes));
   }, [sampleRate]);
 
   // Cleanup on unmount

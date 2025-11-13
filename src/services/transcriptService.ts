@@ -3,6 +3,30 @@ import { Transcript } from '../types';
 export class TranscriptService {
   private storageKey = 'transcript';
 
+  static addMessage(transcript: Transcript[], speaker: Transcript['speaker'], text: string, isFinal: boolean = true, metadata?: Transcript['metadata']): Transcript[] {
+    return [...transcript, { speaker, text, isFinal, metadata }];
+  }
+
+  static appendPartial(transcript: Transcript[], text: string): Transcript[] {
+    const newTranscript = [...transcript];
+    const last = newTranscript[newTranscript.length - 1];
+    if (last && !last.isFinal) {
+      last.text += text;
+    } else {
+      newTranscript.push({ speaker: 'Gemini', text, isFinal: false });
+    }
+    return newTranscript;
+  }
+
+  static finalizeLast(transcript: Transcript[]): Transcript[] {
+    const newTranscript = [...transcript];
+    const last = newTranscript[newTranscript.length - 1];
+    if (last && !last.isFinal) {
+      last.isFinal = true;
+    }
+    return newTranscript;
+  }
+
   loadTranscript(): Transcript[] {
     try {
       const stored = localStorage.getItem(this.storageKey);
@@ -29,11 +53,11 @@ export class TranscriptService {
     }
   }
 
-  exportToText(transcript: Transcript[]): string {
+  static exportToText(transcript: Transcript[]): string {
     return transcript.map(entry => `${entry.speaker}: ${entry.text}`).join('\n');
   }
 
-  async exportToPdf(transcript: Transcript[], filename: string = 'conversation.pdf'): Promise<void> {
+  static async exportToPdf(transcript: Transcript[], filename: string = 'conversation.pdf'): Promise<void> {
     if (!window.jspdf) {
       throw new Error("jsPDF not loaded");
     }
@@ -60,11 +84,11 @@ export class TranscriptService {
     doc.save(filename);
   }
 
-  exportToJson(transcript: Transcript[]): string {
+  static exportToJson(transcript: Transcript[]): string {
     return JSON.stringify(transcript, null, 2);
   }
 
-  async copyToClipboard(transcript: Transcript[]): Promise<void> {
+  static async copyToClipboard(transcript: Transcript[]): Promise<void> {
     const text = this.exportToText(transcript);
     try {
       await navigator.clipboard.writeText(text);

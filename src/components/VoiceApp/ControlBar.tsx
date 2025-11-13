@@ -9,11 +9,15 @@ export const ControlBar: React.FC = () => {
   const { strings: t } = language;
 
   const handleMicButtonClick = () => {
+    console.log('🎤 Mic button clicked. Current status:', session.status);
     if (session.status === 'SPEAKING') {
+      console.log('🎤 Stopping audio playback');
       audio.stopAll();
     } else if (session.status === 'IDLE' || session.status === 'ERROR') {
+      console.log('🎤 Starting session with assistant:', session.selectedAssistant?.titleKey || session.selectedAssistant?.title);
       session.start(session.selectedAssistant!);
     } else {
+      console.log('🎤 Stopping session');
       session.stop();
     }
   };
