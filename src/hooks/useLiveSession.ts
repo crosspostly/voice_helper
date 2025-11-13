@@ -14,20 +14,23 @@ if (typeof globalThis !== 'undefined' && !((globalThis as any)._wsProxyPatched))
     private useProxy: boolean;
 
     constructor(url: string | URL, protocols?: string | string[]) {
-      let wsUrl = url.toString();
-      let useProxy = false;
-      
-      if (wsUrl.includes('generativelanguage.googleapis.com')) {
-        wsUrl = wsUrl.replace('wss://generativelanguage.googleapis.com', 'wss://subbot.sheepoff.workers.dev');
-        useProxy = true;
-        console.log('🌐 WebSocket FORCED to proxy:', wsUrl);
-      }
-      
-      super(wsUrl, protocols);
-      
-      this.startTime = performance.now();
-      this.useProxy = useProxy;
-      
+    let wsUrl = url.toString();
+    
+    // Prepare URL BEFORE calling super()
+    if (wsUrl.includes('generativelanguage.googleapis.com')) {
+      wsUrl = wsUrl.replace('wss://generativelanguage.googleapis.com', 'wss://subbot.sheepoff.workers.dev');
+    }
+    
+    // Call super() FIRST before accessing 'this'
+    super(wsUrl, protocols);
+    
+    // Now we can work with 'this'
+    this.useProxy = wsUrl !== url.toString();
+    this.startTime = performance.now();
+    
+    if (this.useProxy) {
+      console.log('🌐 WebSocket FORCED to proxy:', wsUrl);
+    }      
       this.addEventListener('open', () => {
         const duration = performance.now() - this.startTime;
         metricsCollector.recordMetric({
