@@ -4,6 +4,23 @@ import { createBlob } from '../services/audioUtils';
 import { Assistant, Transcript } from '../types';
 import { useLinguisticsSession } from './useLinguisticsSession';
 
+if (typeof globalThis !== 'undefined' && !((globalThis as any)._wsProxyPatched)) {
+  const OriginalWebSocket = globalThis.WebSocket;
+  (globalThis as any).WebSocket = class extends OriginalWebSocket {
+    constructor(url: string | URL, protocols?: string | string[]) {
+      let wsUrl = url.toString();
+      
+      if (wsUrl.includes('generativelanguage.googleapis.com')) {
+        wsUrl = wsUrl.replace('wss://generativelanguage.googleapis.com', 'wss://subbot.sheepoff.workers.dev');
+        console.log('🌐 WebSocket FORCED to proxy:', wsUrl);
+      }
+      
+      // CRITICAL: Call super() FIRST
+      super(wsUrl, protocols);
+    }
+  };
+  (globalThis as any)._wsProxyPatched = true;
+}
 export type Status = 'IDLE' | 'CONNECTING' | 'LISTENING' | 'SPEAKING' | 'ERROR' | 'PROCESSING' | 'RECONNECTING';
 
 interface UseLiveSessionProps {
