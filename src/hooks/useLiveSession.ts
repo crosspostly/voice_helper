@@ -18,7 +18,7 @@ if (typeof globalThis !== 'undefined' && !((globalThis as any)._wsProxyPatched))
       this.useProxy = false;
       
       if (wsUrl.includes('generativelanguage.googleapis.com')) {
-        wsUrl = wsUrl.replace('wss://generativelanguage.googleapis.com/', 'wss://subbot.sheepoff.workers.dev/');
+        wsUrl = wsUrl.replace('wss://generativelanguage.googleapis.com', 'wss://subbot.sheepoff.workers.dev');
         this.useProxy = true;
         console.log('🌐 WebSocket FORCED to proxy:', wsUrl);
       }
