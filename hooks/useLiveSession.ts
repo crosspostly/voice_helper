@@ -4,6 +4,7 @@ import { createBlob } from '../services/audioUtils';
 import { Assistant, Transcript } from '../types';
 import { useLinguisticsSession } from './useLinguisticsSession';
 
+// CRITICAL FIX: Patch WebSocket for proxy support
 if (typeof globalThis !== 'undefined' && !((globalThis as any)._wsProxyPatched)) {
   const OriginalWebSocket = globalThis.WebSocket;
   (globalThis as any).WebSocket = class extends OriginalWebSocket {
@@ -15,12 +16,12 @@ if (typeof globalThis !== 'undefined' && !((globalThis as any)._wsProxyPatched))
         console.log('🌐 WebSocket FORCED to proxy:', wsUrl);
       }
       
-      // CRITICAL: Call super() FIRST
       super(wsUrl, protocols);
     }
   };
   (globalThis as any)._wsProxyPatched = true;
 }
+
 export type Status = 'IDLE' | 'CONNECTING' | 'LISTENING' | 'SPEAKING' | 'ERROR' | 'PROCESSING' | 'RECONNECTING';
 
 interface UseLiveSessionProps {
