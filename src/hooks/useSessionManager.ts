@@ -48,6 +48,17 @@ export function useSessionManager(options: UseSessionManagerOptions = {}) {
     try {
       // Patch global fetch for proxy where needed
       if (useProxy) {
+              // Patch WebSocket for proxy
+      const OriginalWebSocket = globalThis.WebSocket;
+      globalThis.WebSocket = class extends OriginalWebSocket {
+        constructor(url: string | URL, protocols?: string | string[]) {
+          if (typeof url === 'string' && url.startsWith('wss://generativelanguage.googleapis.com')) {
+            url = url.replace('wss://generativelanguage.googleapis.com', WSS_PROXY_URL);
+          }
+          super(url, protocols);
+        }
+      } as any;
+
         const originalFetch = globalThis.fetch;
         globalThis.fetch = (url, options) => {
           if (typeof url === 'string' && url.startsWith('https://generativelanguage.googleapis.com')) {
@@ -57,6 +68,7 @@ export function useSessionManager(options: UseSessionManagerOptions = {}) {
         };
         const client = new GoogleGenAI({ apiKey });
         globalThis.fetch = originalFetch; // cleanup
+              globalThis.WebSocket = OriginalWebSocket; // cleanup
         return client;
       }
       return new GoogleGenAI({ apiKey });
