@@ -15,16 +15,18 @@ if (typeof globalThis !== 'undefined' && !((globalThis as any)._wsProxyPatched))
 
     constructor(url: string | URL, protocols?: string | string[]) {
       let wsUrl = url.toString();
-      this.useProxy = false;
+      const useProxy = false;
       
       if (wsUrl.includes('generativelanguage.googleapis.com')) {
         wsUrl = wsUrl.replace('wss://generativelanguage.googleapis.com/', 'wss://subbot.sheepoff.workers.dev/');
-        this.useProxy = true;
         console.log('🌐 WebSocket FORCED to proxy:', wsUrl);
       }
       
-      this.startTime = performance.now();
+      const startTime = performance.now();
       super(wsUrl, protocols);
+      
+      this.startTime = startTime;
+      this.useProxy = useProxy || wsUrl.includes('subbot.sheepoff.workers.dev');
       
       // Add event listeners for metrics
       this.addEventListener('open', () => {
@@ -165,8 +167,14 @@ export const useLiveSession = ({
 
 
   const startSession = useCallback(async () => {
+    log(`🎤 startSession called. Current status: ${status}`);
     if (status !== 'IDLE' && status !== 'ERROR' && status !== 'RECONNECTING') {
       log(`startSession called with invalid status: ${status}. Aborting.`, 'INFO');
+      return;
+    }
+    if (!selectedAssistant) {
+      log('Cannot start session: No assistant selected', 'ERROR');
+      setStatus('ERROR');
       return;
     }
     if (!ai) {
@@ -248,7 +256,7 @@ export const useLiveSession = ({
             keepAliveIntervalRef.current = window.setInterval(() => {
                 sessionPromiseRef.current?.then(session => {
                     if (session?.ws && session.ws.readyState !== 1) {
-                      log('Keep-alive skipped: ws not OPEN', 'WARN');
+                      log('Keep-alive skipped: ws not OPEN', 'INFO');
                       return;
                     }
                     const silentBlob = createBlob(new Float32Array(160)); 
@@ -322,16 +330,71 @@ export const useLiveSession = ({
       setStatus('ERROR');
       setIsSessionActive(false);
     }
-  }, [ai, status, selectedAssistant, stopSession, playAudio, stopPlayback, selectedVoice, log, setTranscript, transcript, onResponseComplete]);
+  }, [ai, status, selectedAssistant, stopSession, playAudio, stopPlayback, selectedVoice, log, setTranscript, onResponseComplete]);
+
+  // Track when startSession function changes (for debugging)
+  useEffect(() => {
+    log('🎤 startSession function recreated');
+  }, [startSession]);
 
   useEffect(() => {
+    log('🎤 useLiveSession effect mounted');
     return () => {
       if (isSessionActiveRef.current) {
         log('Component unmounting, ensuring session is stopped.');
-        stopSession();
+        // Call cleanup directly without depending on stopSession to avoid re-renders
+        (async () => {
+          if (keepAliveIntervalRef.current) {
+            window.clearInterval(keepAliveIntervalRef.current);
+            keepAliveIntervalRef.current = null;
+            log('Keep-alive interval cleared.');
+          }
+
+          if (sessionPromiseRef.current) {
+            log('Closing existing session...');
+            try {
+              const session = await sessionPromiseRef.current;
+              if (session?.ws && session.ws.readyState !== 3 && session.ws.readyState !== 2) {
+                session.ws.close();
+              }
+              session.close();
+              log('Session.close() called.');
+            } catch (e) {
+              log(`Error closing session: ${(e as Error).message}`, 'ERROR');
+            }
+            sessionPromiseRef.current = null;
+          }
+
+          if (audioWorkletNodeRef.current) {
+            log('Disconnecting AudioWorklet...');
+            audioWorkletNodeRef.current.port.onmessage = null;
+            audioWorkletNodeRef.current.disconnect();
+            audioWorkletNodeRef.current = null;
+          }
+          if (mediaStreamSourceRef.current) {
+            log('Disconnecting media stream source...');
+            mediaStreamSourceRef.current.disconnect();
+            mediaStreamSourceRef.current = null;
+          }
+          if (inputAudioContextRef.current && inputAudioContextRef.current.state !== 'closed') {
+            log('Closing input audio context...');
+            await inputAudioContextRef.current.close().catch(e => log(`Error closing input audio context: ${e.message}`, 'ERROR'));
+            inputAudioContextRef.current = null;
+          }
+          if (wakeLockRef.current) {
+            log('Releasing screen wake lock...');
+            await wakeLockRef.current.release();
+            wakeLockRef.current = null;
+            log('Screen Wake Lock released.');
+          }
+
+          setIsSessionActive(false);
+          setStatus('IDLE');
+          log('Session cleanup completed.');
+        })();
       }
     };
-  }, [stopSession, log]);
+  }, [log]);
 
   const sendTextMessage = useCallback(async (text: string) => {
     log('Text messaging not implemented in live session', 'ERROR');

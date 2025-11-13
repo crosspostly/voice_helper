@@ -2,6 +2,7 @@ export interface Transcript {
   speaker: 'You' | 'Gemini';
   text: string;
   isFinal?: boolean;
+  metadata?: any;
 }
 
 export interface Assistant {
@@ -9,6 +10,7 @@ export interface Assistant {
   title?: string; // For custom personas
   titleKey?: string; // For preset personas
   prompt: string;
+  isLinguisticsService?: boolean;
 }
 
 // --- Globals for browser APIs ---

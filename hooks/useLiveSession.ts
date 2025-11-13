@@ -61,7 +61,7 @@ export const useLiveSession = ({
   }, [isSessionActive]);
 
   const stopSession = useCallback(async (isRestarting = false) => {
-    log(`stopSession called. isRestarting: ${isRestarting}`);
+    log(`🎤 stopSession called. isRestarting: ${isRestarting}, current status: ${status}`);
     
     if (!isRestarting) {
       setIsSessionActive(false);
@@ -120,8 +120,15 @@ export const useLiveSession = ({
 
 
   const startSession = useCallback(async () => {
+    log(`🎤 startSession called. Current status: ${status}`);
     if (status !== 'IDLE' && status !== 'ERROR' && status !== 'RECONNECTING') {
       log(`startSession called with invalid status: ${status}. Aborting.`, 'INFO');
+      return;
+    }
+
+    if (!selectedAssistant) {
+      log('Cannot start session: No assistant selected', 'ERROR');
+      setStatus('ERROR');
       return;
     }
 
@@ -389,7 +396,7 @@ export const useLiveSession = ({
         ? `\n\nPREVIOUS CONVERSATION HISTORY:\n${historyText}`
         : '';
         
-      const finalSystemInstruction = `${TURN_TAKING_INSTRUCTION}\n\n${selectedAssistant.prompt || ''}${contextInstruction}`;
+      const finalSystemInstruction = `${TURN_TAKING_INSTRUCTION}\n\n${selectedAssistant?.prompt || ''}${contextInstruction}`;
 
       const liveConfig = {
         responseModalities: [Modality.AUDIO],
@@ -417,16 +424,72 @@ export const useLiveSession = ({
       setStatus('ERROR');
       setIsSessionActive(false);
     }
-  }, [ai, status, selectedAssistant, stopSession, playAudio, stopPlayback, selectedVoice, log, setTranscript, transcript]);
+  }, [ai, status, selectedAssistant, stopSession, playAudio, stopPlayback, selectedVoice, log, setTranscript]);
+
+  // Track when startSession function changes (for debugging)
+  useEffect(() => {
+    log('🎤 startSession function recreated');
+  }, [startSession]);
 
   useEffect(() => {
+    log('🎤 useLiveSession effect mounted');
     return () => {
+      log('🎤 useLiveSession effect cleanup - checking session state');
       if (isSessionActiveRef.current) {
         log('Component unmounting, ensuring session is stopped.');
-        stopSession();
+        // Call cleanup directly without depending on stopSession to avoid re-renders
+        (async () => {
+          if (sessionPromiseRef.current) {
+            log('Closing existing session...');
+            try {
+              const session = await sessionPromiseRef.current;
+              session.close();
+              log('Session.close() called.');
+            } catch (e) {
+              log(`Error closing session: ${(e as Error).message}`, 'ERROR');
+            }
+            sessionPromiseRef.current = null;
+          }
+
+          if (audioWorkletNodeRef.current) {
+            log('Disconnecting AudioWorklet...');
+            audioWorkletNodeRef.current.port.onmessage = null;
+            audioWorkletNodeRef.current.disconnect();
+            audioWorkletNodeRef.current = null;
+          }
+          if (mediaStreamSourceRef.current) {
+            log('Disconnecting media stream source...');
+            mediaStreamSourceRef.current.disconnect();
+            mediaStreamSourceRef.current = null;
+          }
+          if (inputAudioContextRef.current && inputAudioContextRef.current.state !== 'closed') {
+            log('Closing input audio context...');
+            await inputAudioContextRef.current.close().catch(e => log(`Error closing input audio context: ${e.message}`, 'ERROR'));
+            inputAudioContextRef.current = null;
+          }
+
+          if (wakeLockRef.current) {
+            log('Releasing screen wake lock...');
+            await wakeLockRef.current.release();
+            wakeLockRef.current = null;
+            log('Screen Wake Lock released.');
+          }
+
+          if (keepAliveIntervalRef.current) {
+            window.clearInterval(keepAliveIntervalRef.current);
+            keepAliveIntervalRef.current = null;
+            log('Keep-alive interval cleared.');
+          }
+
+          setIsSessionActive(false);
+          setStatus('IDLE');
+          log('Session cleanup completed.');
+        })();
+      } else {
+        log('🎤 Cleanup: No active session to stop');
       }
     };
-  }, [stopSession, log]);
+  }, [log]);
 
   // Function to handle text messages for linguistics assistants
   const sendTextMessage = useCallback(async (text: string) => {
