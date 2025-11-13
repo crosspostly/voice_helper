@@ -11,7 +11,6 @@ if (typeof globalThis !== 'undefined' && !((globalThis as any)._wsProxyPatched))
     constructor(url: string | URL, protocols?: string | string[]) {
       let wsUrl = url.toString();
       if (wsUrl.includes('generativelanguage.googleapis.com')) {
-    wsUr// Extract path from original URL and prepend to proxy
         const urlObj = new URL(wsUrl);
         wsUrl = `wss://subbot.sheepoff.workers.dev${urlObj.pathname}${urlObj.search}`;
         console.log('🌐 WebSocket FORCED to proxy:', wsUrl);
