@@ -67,8 +67,6 @@ export function useSessionManager(options: UseSessionManagerOptions = {}) {
           return originalFetch(url, options);
         };
         const client = new GoogleGenAI({ apiKey });
-        globalThis.fetch = originalFetch; // cleanup
-              globalThis.WebSocket = OriginalWebSocket; // cleanup
         return client;
       }
       return new GoogleGenAI({ apiKey });
