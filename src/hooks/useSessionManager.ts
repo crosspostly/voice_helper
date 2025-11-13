@@ -34,7 +34,8 @@ export function useSessionManager(options: UseSessionManagerOptions = {}) {
   const languageManager = useLanguageManager();
   const { requestWakeLock, releaseWakeLock, isActive: isWakeLockActive } = useWakeLock();
 
-  // Proxy state (default: ON)  const [useProxy, setUseProxy] = useState(true);
+  // Proxy state (default: ON)
+  const [useProxy, setUseProxy] = useState(true);
   const [autoDetectedBlock, setAutoDetectedBlock] = useState(false);
   const [selectedAssistant, setSelectedAssistant] = useState<Assistant | null>(null);
   const [selectedVoice, setSelectedVoice] = useState<string>('Zephyr');
@@ -48,29 +49,24 @@ export function useSessionManager(options: UseSessionManagerOptions = {}) {
     try {
       // Patch global fetch for proxy where needed
       if (useProxy) {
-              // Patch WebSocket for proxy
-      const OriginalWebSocket = globalThis.WebSocket;
-      globalThis.WebSocket = class extends OriginalWebSocket {
-        constructor(url: string | URL, protocols?: string | string[]) {
-          if (typeof url === 'string' && url.startsWith('wss://generativelanguage.googleapis.com')) {
-// Extract path from original URL and prepend to proxy
-        const urlObj = new URL(url);
-        url = `${WSS_PROXY_URL}${urlObj.pathname}${urlObj.search}`;
-          }
-          super(url, protocols);
-        }
-      } as any;
-
         const originalFetch = globalThis.fetch;
-        globalThis.fetch = (url, options) => {
-          if (typeof url === 'string' && url.startsWith('https://generativelanguage.googleapis.com')) {
-            return originalFetch(url.replace('https://generativelanguage.googleapis.com', HTTP_PROXY_URL), options);
+        globalThis.fetch = ((url: any, options: any) => {
+          if (typeof url === 'string' && url.includes('generativelanguage.googleapis.com')) {
+            const proxiedUrl = url.replace(
+              'https://generativelanguage.googleapis.com',
+              HTTP_PROXY_URL
+            );
+            console.log('🌐 HTTP proxied:', proxiedUrl);
+            return originalFetch(proxiedUrl, options);
           }
           return originalFetch(url, options);
-        };
+        }) as typeof fetch;
+
         const client = new GoogleGenAI({ apiKey });
+        globalThis.fetch = originalFetch;
         return client;
       }
+
       return new GoogleGenAI({ apiKey });
     } catch (error) {
       return null;

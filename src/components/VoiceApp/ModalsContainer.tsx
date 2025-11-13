@@ -69,6 +69,9 @@ export const ModalsContainer: React.FC = () => {
         onCustomApiKeyChange={handleCustomApiKeyChange}
         onResetApiKey={handleResetApiKey}
         log={logger.log}
+        useProxy={ui.useProxy}
+        setUseProxy={ui.setUseProxy}
+        autoDetectedBlock={ui.autoDetectedBlock}
       />
     </>
   );

@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect, Dispatch, SetStateAction } fr
 import { GoogleGenAI, LiveServerMessage, Modality } from '@google/genai';
 import { createBlob } from '../services/audioUtils';
 import { Assistant, Transcript } from '../types';
+import { PROXY_CONFIG } from '../proxy';
 
 
 // CRITICAL: Force WebSocket through proxy BEFORE any connections
@@ -12,7 +13,7 @@ if (typeof globalThis !== 'undefined' && !((globalThis as any)._wsProxyPatched))
       let wsUrl = url.toString();
       if (wsUrl.includes('generativelanguage.googleapis.com')) {
         const urlObj = new URL(wsUrl);
-        wsUrl = `wss://subbot.sheepoff.workers.dev${urlObj.pathname}${urlObj.search}`;
+        wsUrl = `${PROXY_CONFIG.WSS_PROXY_URL}${urlObj.pathname}${urlObj.search}`;
         console.log('🌐 WebSocket FORCED to proxy:', wsUrl);
       }
       super(wsUrl, protocols);

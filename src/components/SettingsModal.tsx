@@ -38,6 +38,9 @@ interface SettingsModalProps {
     onCustomApiKeyChange: (key: string) => void;
     onResetApiKey: () => void;
     log: (message: string, level?: 'INFO' | 'ERROR' | 'DEBUG') => void;
+    useProxy?: boolean;
+    setUseProxy?: (value: boolean) => void;
+    autoDetectedBlock?: boolean;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ 
@@ -54,7 +57,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     customApiKey,
     onCustomApiKeyChange,
     onResetApiKey,
-    log
+    log,
+    useProxy = true,
+    setUseProxy,
+    autoDetectedBlock = false
 }) => {
     const [isAdultMode, setIsAdultMode] = useState(() => localStorage.getItem('isAdultMode') === 'true');
     const [showSaveOptions, setShowSaveOptions] = useState(false);
@@ -185,6 +191,31 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             <input type="checkbox" id="dev-mode" className="sr-only peer" checked={isDevMode} onChange={() => setIsDevMode(!isDevMode)} />
                             <div className="w-11 h-6 bg-gray-400 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"></div>
                         </label>
+                    </div>
+                    <div className="mb-4 p-4 bg-[#FDF6ED] rounded-lg border border-gray-300">
+                        <div className="flex items-center justify-between mb-2">
+                            <label className="flex items-center space-x-2 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={useProxy}
+                                    onChange={(e) => setUseProxy?.(e.target.checked)}
+                                    className="w-4 h-4 accent-green-600"
+                                />
+                                <span className="text-sm font-medium text-gray-900">
+                                    🌐 {lang === 'ru' ? 'Использовать прокси-сервер' : 'Use proxy server'}
+                                </span>
+                            </label>
+                            {autoDetectedBlock && (
+                                <span className="text-xs bg-yellow-500 text-black px-2 py-1 rounded font-medium">
+                                    {lang === 'ru' ? 'Авто' : 'Auto'}
+                                </span>
+                            )}
+                        </div>
+                        <p className="text-xs text-gray-600">
+                            {lang === 'ru'
+                                ? 'Обход блокировок Google AI в России и других странах. Автоматически включается при ошибке геолокации.'
+                                : 'Bypass Google AI blocking in Russia and other countries. Auto-enabled when geo-blocking is detected.'}
+                        </p>
                     </div>
                     <div className="p-3 bg-grapefruit rounded-lg">
                         <label htmlFor="api-key-input" className="block font-medium text-text mb-1 text-sm sm:text-base">{F('customApiKey')}</label>
