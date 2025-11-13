@@ -10,6 +10,7 @@ import { useLogger } from './useLogger';
 import { useAudioEngine } from './useAudioEngine';
 import { useLanguageManager } from './useLanguageManager';
 import { useWakeLock } from './useWakeLock';
+import { PROXY_CONFIG } from '../proxy';
 
 interface UseSessionManagerOptions {
   customApiKey?: string | null;
@@ -18,9 +19,7 @@ interface UseSessionManagerOptions {
 }
 
 // New: Proxy constants
-const HTTP_PROXY_URL = '/api/gemini-proxy';
-const WSS_PROXY_URL = 'wss://gemini-ws-proxy.your-subdomain.workers.dev';
-
+const { HTTP_PROXY_URL, WSS_PROXY_URL } = PROXY_CONFIG;
 export function useSessionManager(options: UseSessionManagerOptions = {}) {
   const { 
     customApiKey, 
@@ -35,8 +34,7 @@ export function useSessionManager(options: UseSessionManagerOptions = {}) {
   const languageManager = useLanguageManager();
   const { requestWakeLock, releaseWakeLock, isActive: isWakeLockActive } = useWakeLock();
 
-  // Proxy state (default: off)
-  const [useProxy, setUseProxy] = useState(false);
+  // Proxy state (default: ON)  const [useProxy, setUseProxy] = useState(true);
   const [autoDetectedBlock, setAutoDetectedBlock] = useState(false);
   const [selectedAssistant, setSelectedAssistant] = useState<Assistant | null>(null);
   const [selectedVoice, setSelectedVoice] = useState<string>('Zephyr');
