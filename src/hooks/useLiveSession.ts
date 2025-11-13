@@ -14,21 +14,23 @@ if (typeof globalThis !== 'undefined' && !((globalThis as any)._wsProxyPatched))
     private useProxy: boolean;
 
     constructor(url: string | URL, protocols?: string | string[]) {
-      let wsUrl = url.toString();
-      const useProxy = false;
-      
-      if (wsUrl.includes('generativelanguage.googleapis.com')) {
-        wsUrl = wsUrl.replace('wss://generativelanguage.googleapis.com/', 'wss://subbot.sheepoff.workers.dev/');
-        console.log('🌐 WebSocket FORCED to proxy:', wsUrl);
-      }
-      
-      const startTime = performance.now();
-      super(wsUrl, protocols);
-      
-      this.startTime = startTime;
-      this.useProxy = useProxy || wsUrl.includes('subbot.sheepoff.workers.dev');
-      
-      // Add event listeners for metrics
+    let wsUrl = url.toString();
+    
+    // Prepare URL BEFORE calling super()
+    if (wsUrl.includes('generativelanguage.googleapis.com')) {
+      wsUrl = wsUrl.replace('wss://generativelanguage.googleapis.com', 'wss://subbot.sheepoff.workers.dev');
+    }
+    
+    // Call super() FIRST before accessing 'this'
+    super(wsUrl, protocols);
+    
+    // Now we can work with 'this'
+    this.useProxy = wsUrl !== url.toString();
+    this.startTime = performance.now();
+    
+    if (this.useProxy) {
+      console.log('🌐 WebSocket FORCED to proxy:', wsUrl);
+    }      
       this.addEventListener('open', () => {
         const duration = performance.now() - this.startTime;
         metricsCollector.recordMetric({
@@ -214,7 +216,7 @@ export const useLiveSession = ({
         onopen: () => {
           (async () => {
             log('Connection opened successfully.', 'INFO');
-            reconnectAttemptsRef.current = 0; // Reset counter on successful connection
+            reconnectAttemptsRef.current = 0;
             setStatus('LISTENING');
             log('Setting up audio processing pipeline...');
             if (!inputAudioContextRef.current || inputAudioContextRef.current.state === 'closed') {
@@ -232,10 +234,8 @@ export const useLiveSession = ({
             audioWorkletNodeRef.current = workletNode;
             log('AudioWorkletNode created.');
             workletNode.port.onmessage = (event) => {
-              // WebSocket-state guard: block send if not open
               if (sessionPromiseRef.current) {
                 sessionPromiseRef.current.then((session) => {
-                  // Defensive: check ws
                   if (session?.ws && session.ws.readyState !== 1) {
                     log('sendRealtimeInput aborted: WebSocket not OPEN (state=' + session.ws.readyState + ')', 'ERROR');
                     stopSession();
