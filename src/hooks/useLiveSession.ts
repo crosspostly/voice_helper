@@ -10,7 +10,7 @@ import { metricsCollector } from '../services/proxyMetrics';
 if (typeof globalThis !== 'undefined' && !((globalThis as any)._wsProxyPatched)) {
   const OriginalWebSocket = globalThis.WebSocket;
   
-  // Use Proxy instead of class extends to avoid constructor issues
+  // Use Proxy with Reflect.construct to avoid constructor issues
   (globalThis as any).WebSocket = new Proxy(OriginalWebSocket, {
     construct(target, args) {
       let [url, protocols] = args;
@@ -24,8 +24,8 @@ if (typeof globalThis !== 'undefined' && !((globalThis as any)._wsProxyPatched))
         console.log('🌐 WebSocket FORCED to proxy:', url);
       }
       
-      // Create the original WebSocket with the transformed URL
-      const ws = new target(url, protocols);
+      // Create the original WebSocket with the transformed URL using Reflect.construct
+      const ws = Reflect.construct(target, [url, protocols]);
       
       // Add metrics collection
       const duration = performance.now() - startTime;
