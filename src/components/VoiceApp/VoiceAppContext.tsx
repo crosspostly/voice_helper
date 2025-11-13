@@ -92,6 +92,9 @@ interface VoiceAppContextType {
     setPersonaView: (view: 'select' | 'edit' | 'add') => void;
     editingPersona: any;
     setEditingPersona: (persona: any) => void;
+    useProxy: boolean;
+    setUseProxy: (enabled: boolean) => void;
+    autoDetectedBlock: boolean;
   };
 }
 
@@ -180,6 +183,32 @@ export const VoiceAppProvider: React.FC<VoiceAppProviderProps> = ({
     defaultApiKey,
   });
 
+  // Sync proxy state with session manager
+  React.useEffect(() => {
+    if ((sessionManager as any).setUseProxy) {
+      (sessionManager as any).setUseProxy(useProxy);
+    }
+  }, [useProxy, sessionManager]);
+
+  React.useEffect(() => {
+    if ((sessionManager as any).setAutoDetectedBlock) {
+      (sessionManager as any).setAutoDetectedBlock(autoDetectedBlock);
+    }
+  }, [autoDetectedBlock, sessionManager]);
+
+  // Sync proxy state from session manager to UI
+  React.useEffect(() => {
+    if ((sessionManager as any).useProxy !== undefined) {
+      setUseProxy((sessionManager as any).useProxy);
+    }
+  }, [(sessionManager as any).useProxy]);
+
+  React.useEffect(() => {
+    if ((sessionManager as any).autoDetectedBlock !== undefined) {
+      setAutoDetectedBlock((sessionManager as any).autoDetectedBlock);
+    }
+  }, [(sessionManager as any).autoDetectedBlock]);
+
   // Persona service
   const personaService = React.useMemo(() => new PersonaService(), []);
 
@@ -195,6 +224,10 @@ export const VoiceAppProvider: React.FC<VoiceAppProviderProps> = ({
   const [copyButtonText, setCopyButtonText] = React.useState('');
   const [personaView, setPersonaView] = React.useState<'select' | 'edit' | 'add'>('select');
   const [editingPersona, setEditingPersona] = React.useState<any>(null);
+  
+  // Proxy state
+  const [useProxy, setUseProxy] = React.useState(true);
+  const [autoDetectedBlock, setAutoDetectedBlock] = React.useState(false);
 
   // Initialize assistants and selected assistant on mount
   useEffect(() => {
@@ -303,6 +336,9 @@ export const VoiceAppProvider: React.FC<VoiceAppProviderProps> = ({
       setPersonaView,
       editingPersona,
       setEditingPersona,
+      useProxy,
+      setUseProxy,
+      autoDetectedBlock,
     },
   };
 
