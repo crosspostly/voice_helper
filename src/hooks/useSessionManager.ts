@@ -17,96 +17,73 @@ interface UseSessionManagerOptions {
   userId?: string;
 }
 
-interface UseSessionManagerReturn {
-  // Session state
-  status: Status;
-  isActive: boolean;
-  timeLeft: number;
-  reconnecting: boolean;
-  errorState: string | null;
-  selectedAssistant: Assistant | null;
-  
-  // Session actions
-  start: (assistant: Assistant) => Promise<void>;
-  stop: () => Promise<void>;
-  restart: () => Promise<void>;
-  
-  // Communication actions
-  sendText: (text: string) => Promise<void>;
-  sendStructuredMessage: (message: any) => Promise<void>;
-  
-  // Configuration
-  setSelectedAssistant: (assistant: Assistant) => void;
-  setVoice: (voice: string) => void;
-  
-  // Sub-hooks access
-  transcript: ReturnType<typeof useTranscript>;
-  audioEngine: ReturnType<typeof useAudioEngine>;
-  logger: ReturnType<typeof useLogger>;
-  languageManager: ReturnType<typeof useLanguageManager>;
-  wakeLock: {
-    isActive: boolean;
-  };
-}
+// New: Proxy constants
+const HTTP_PROXY_URL = '/api/gemini-proxy';
+const WSS_PROXY_URL = 'wss://gemini-ws-proxy.your-subdomain.workers.dev';
 
-/**
- * High-level hook for managing live sessions with auto-reconnect
- */
-export function useSessionManager(options: UseSessionManagerOptions = {}): UseSessionManagerReturn {
+export function useSessionManager(options: UseSessionManagerOptions = {}) {
   const { 
     customApiKey, 
     defaultApiKey = 'AIzaSyCrPJN5yn3QAmHEydsmQ8XK_vQPCJvamSA',
     userId = 'user-1'
   } = options;
 
-  // Core hooks
   const logger = useLogger({ enablePersistence: process.env.NODE_ENV === 'development' });
   const transcript = useTranscript();
   const audioEngine = useAudioEngine();
   const timer = useAutoReconnectTimer();
   const languageManager = useLanguageManager();
   const { requestWakeLock, releaseWakeLock, isActive: isWakeLockActive } = useWakeLock();
-  
-  // State
+
+  // Proxy state (default: off)
+  const [useProxy, setUseProxy] = useState(false);
+  const [autoDetectedBlock, setAutoDetectedBlock] = useState(false);
   const [selectedAssistant, setSelectedAssistant] = useState<Assistant | null>(null);
   const [selectedVoice, setSelectedVoice] = useState<string>('Zephyr');
   const [reconnecting, setReconnecting] = useState(false);
   const [errorState, setErrorState] = useState<string | null>(null);
 
-  // Gemini service
-  const geminiService = useMemo(() => {
-    const apiKey = customApiKey || defaultApiKey;
-    if (!apiKey) {
-      return null;
-    }
-    try {
-      return GeminiService.create(apiKey);
-    } catch (error) {
-      return null;
-    }
-  }, [customApiKey, defaultApiKey]);
-
+  // Gemini service instantiation with proxy, if enabled
   const ai = useMemo(() => {
     const apiKey = customApiKey || defaultApiKey;
-    if (!apiKey) {
-      return null;
-    }
+    if (!apiKey) return null;
     try {
+      // Patch global fetch for proxy where needed
+      if (useProxy) {
+        const originalFetch = globalThis.fetch;
+        globalThis.fetch = (url, options) => {
+          if (typeof url === 'string' && url.startsWith('https://generativelanguage.googleapis.com')) {
+            return originalFetch(url.replace('https://generativelanguage.googleapis.com', HTTP_PROXY_URL), options);
+          }
+          return originalFetch(url, options);
+        };
+        const client = new GoogleGenAI({ apiKey });
+        globalThis.fetch = originalFetch; // cleanup
+        return client;
+      }
       return new GoogleGenAI({ apiKey });
     } catch (error) {
       return null;
     }
-  }, [customApiKey, defaultApiKey]);
+  }, [customApiKey, defaultApiKey, useProxy]);
 
-  // Log errors in useEffect instead of useMemo to prevent re-renders
-  useEffect(() => {
-    const apiKey = customApiKey || defaultApiKey;
-    if (!apiKey) {
-      logger.log('No API key provided for Gemini service', 'ERROR');
+  // ...proxy error handler as callback
+  const handleGeoBlockError = useCallback((error: any) => {
+    const errorMessage = error?.message || error?.toString() || '';
+    if (
+      errorMessage.includes('User location is not supported') ||
+      errorMessage.includes('FAILED_PRECONDITION') ||
+      error?.code === 400
+    ) {
+      logger.log('🚨 Geo-blocking detected! Auto-enabling proxy...', 'INFO');
+      setUseProxy(true);
+      setAutoDetectedBlock(true);
+      alert('Geo-blocking detected. Proxy enabled automatically.');
+      return true;
     }
-  }, [customApiKey, defaultApiKey, logger]);
+    return false;
+  }, [logger]);
 
-  // Live session hook
   const { 
     status, 
     startSession, 
@@ -127,22 +104,19 @@ export function useSessionManager(options: UseSessionManagerOptions = {}): UseSe
     onResponseComplete: useCallback(() => {
       if (timer.shouldReconnect()) {
         logger.log('⏰ Session age ≥ 4.5 min, triggering auto-reconnect...', 'INFO');
-        // Trigger auto-reconnect
         setTimeout(() => triggerAutoReconnect(), 0);
       }
     }, [timer]),
   });
 
-  // Auto-reconnect logic
+  // Auto-reconnect logic (unchanged)
   const triggerAutoReconnect = useCallback(async () => {
     if (status !== 'LISTENING' && status !== 'IDLE') {
       logger.log('Auto-reconnect skipped (Gemini speaking)', 'DEBUG');
       return;
     }
-    
-    logger.log('🔄 Auto-reconnect: Refreshing session to prevent timeout...', 'INFO');
+    logger.log('🔄 Auto-reconnect: Refreshing session...', 'INFO');
     setReconnecting(true);
-    
     try {
       await stopSession(false);
       await new Promise(resolve => setTimeout(resolve, 300));
@@ -157,45 +131,42 @@ export function useSessionManager(options: UseSessionManagerOptions = {}): UseSe
     }
   }, [status, stopSession, startSession, timer, logger]);
 
-  // Session actions
+  // Session actions (with proxy-aware retry)
   const start = useCallback(async (assistant: Assistant) => {
     try {
       setErrorState(null);
       setSelectedAssistant(assistant);
       timer.startTimer();
-      
-      // Activate Wake Lock before starting audio session
       await requestWakeLock();
-      
       if (assistant.isLinguisticsService) {
-        // Use linguistics session - for now just log it
         logger.log('Linguistics service was requested but is removed', 'WARN');
       }
-      
       await startSession();
       logger.log('Session started with Wake Lock active', 'INFO');
     } catch (error) {
       logger.log(`Failed to start session: ${error}`, 'ERROR');
-      setErrorState('Failed to start session');
+      // Автопрокси при ошибке гео
+      if (handleGeoBlockError(error)) {
+        logger.log('Retrying start with proxy...', 'INFO');
+        await startSession();
+      } else {
+        setErrorState('Failed to start session');
+      }
       timer.stopTimer();
-      await releaseWakeLock(); // Cleanup if startup fails
+      await releaseWakeLock();
     }
-  }, [startSession, timer, logger, requestWakeLock, releaseWakeLock]);
+  }, [startSession, timer, logger, requestWakeLock, releaseWakeLock, handleGeoBlockError]);
 
   const stop = useCallback(async () => {
     try {
       setErrorState(null);
       await stopSession();
       timer.stopTimer();
-      
-      // Release Wake Lock after session ends
       await releaseWakeLock();
-      
       logger.log('Session stopped, Wake Lock released', 'INFO');
     } catch (error) {
       logger.log(`Error stopping session: ${error}`, 'ERROR');
       setErrorState('Failed to stop session');
-      // Attempt cleanup anyway
       await releaseWakeLock();
     }
   }, [stopSession, timer, logger, releaseWakeLock]);
@@ -205,35 +176,37 @@ export function useSessionManager(options: UseSessionManagerOptions = {}): UseSe
       logger.log('Cannot restart: no assistant selected', 'ERROR');
       return;
     }
-    
     logger.log('Restarting session...', 'INFO');
     await stop();
     await new Promise(resolve => setTimeout(resolve, 500));
     await start(selectedAssistant);
   }, [selectedAssistant, stop, start, logger]);
 
-  // Communication actions
+  // Communication actions (proxy-aware)
   const sendText = useCallback(async (text: string) => {
     try {
       if (selectedAssistant?.isLinguisticsService) {
-        // Linguistics was removed in hotfix #18
         logger.log('Linguistics service removed - falling back to regular session', 'WARN');
         transcript.addMessage('You', text);
       } else {
-        // Regular Gemini session - text would be handled by live session
         await sendTextMessage(text);
         transcript.addMessage('You', text);
         logger.log(`Text sent: ${text}`, 'DEBUG');
       }
     } catch (error) {
       logger.log(`Failed to send text: ${error}`, 'ERROR');
-      setErrorState('Failed to send message');
+      // Автопрокси при ошибке гео
+      if (handleGeoBlockError(error)) {
+        logger.log('Retrying text send with proxy...', 'INFO');
+        await sendTextMessage(text);
+      } else {
+        setErrorState('Failed to send message');
+      }
     }
-  }, [selectedAssistant, sendTextMessage, transcript, logger]);
+  }, [selectedAssistant, sendTextMessage, transcript, logger, handleGeoBlockError]);
 
   const sendStructuredMessage = useCallback(async (message: any) => {
     try {
-      // This would send structured data to the session
       logger.log(`Structured message sent: ${JSON.stringify(message)}`, 'DEBUG');
     } catch (error) {
       logger.log(`Failed to send structured message: ${error}`, 'ERROR');
@@ -241,29 +214,26 @@ export function useSessionManager(options: UseSessionManagerOptions = {}): UseSe
     }
   }, [logger]);
 
+  // Make proxy/geo-blocking state accessible
+  (useSessionManager as any).useProxy = useProxy;
+  (useSessionManager as any).setUseProxy = setUseProxy;
+  (useSessionManager as any).autoDetectedBlock = autoDetectedBlock;
+  (useSessionManager as any).setAutoDetectedBlock = setAutoDetectedBlock;
+
   return {
-    // Session state
     status,
     isActive: isSessionActive && timer.isActive,
     timeLeft: timer.sessionTimeLeft,
     reconnecting,
     errorState,
     selectedAssistant,
-    
-    // Session actions
     start,
     stop,
     restart,
-    
-    // Communication actions
     sendText,
     sendStructuredMessage,
-    
-    // Configuration
     setSelectedAssistant,
     setVoice: setSelectedVoice,
-    
-    // Sub-hooks access
     transcript,
     audioEngine,
     logger,
