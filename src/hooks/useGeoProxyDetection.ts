@@ -143,7 +143,7 @@ export function useGeoProxyDetection() {
     const interval = setInterval(detectGeoBlocking, 5 * 60 * 1000);
 
     return () => clearInterval(interval);
-  }, [detectGeoBlocking]);
+  }, []);
 
   return {
     ...state,
