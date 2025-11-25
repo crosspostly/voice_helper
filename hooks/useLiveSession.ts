@@ -3,6 +3,37 @@ import { GoogleGenAI, LiveServerMessage, Modality } from '@google/genai';
 import { createBlob } from '../services/audioUtils';
 import { Assistant, Transcript } from '../types';
 import { useLinguisticsSession } from './useLinguisticsSession';
+import { transformUrlForProxy } from '../proxyConfig';
+
+// CRITICAL: Патч WebSocket для использования прокси
+if (
+  typeof globalThis !== 'undefined' &&
+  typeof (globalThis as { WebSocket?: typeof WebSocket }).WebSocket === 'function' &&
+  !(globalThis as any)._wsProxyPatched
+) {
+  const OriginalWebSocket = (globalThis as any).WebSocket;
+
+  (globalThis as any).WebSocket = new Proxy(OriginalWebSocket, {
+    construct(target, args: any[]) {
+      if (typeof args[0] === 'string') {
+        const originalUrl = args[0];
+        const transformedUrl = transformUrlForProxy(originalUrl);
+
+        if (transformedUrl !== originalUrl) {
+          console.log('🌐 WebSocket routed through proxy');
+          console.log('  Original:', originalUrl);
+          console.log('  Proxied:', transformedUrl);
+          args[0] = transformedUrl;
+        }
+      }
+
+      return Reflect.construct(target, args);
+    },
+  });
+
+  (globalThis as any)._wsProxyPatched = true;
+  console.log('✅ WebSocket proxy patch applied');
+}
 
 export type Status = 'IDLE' | 'CONNECTING' | 'LISTENING' | 'SPEAKING' | 'ERROR' | 'PROCESSING' | 'RECONNECTING';
 
