@@ -8,6 +8,7 @@ import { ProgressCard } from './components/ProgressCard';
 import { ServiceStatusIndicator } from './components/ServiceStatusIndicator';
 import { SettingsModal } from './components/SettingsModal';
 import { PersonaInfoModal } from './components/PersonaInfoModal';
+import { getProxyConfig, setProxyEnabled, resetProxyToAuto, ProxyConfig } from './proxyConfig';
 
 type Language = 'en' | 'ru';
 type PersonaView = 'select' | 'edit' | 'add';
@@ -124,6 +125,14 @@ const I18N: Record<Language, Record<string, string>> = {
     persona_debate: "Debate Champion",
     persona_eloquence: "Master of Eloquent Expression",
     persona_emdr_therapist: "Psychotherapist (EMDR Protocol)",
+    useProxy: "Use Proxy",
+    proxyDesc: "Routes requests through Cloudflare Worker to bypass regional blocks",
+    proxyAutoDetect: "(auto-detected based on location)",
+    proxyManual: "(manually set)",
+    proxyResetToAuto: "Reset to auto-detect",
+    proxyEnabled: "✅ Requests routed through proxy",
+    proxyDisabled: "⚠️ Direct connection to Google API",
+    proxyReloadRequired: "Page reload required for changes to take effect",
   },
   ru: {
     title: "Голосовой Ассистент",
@@ -197,6 +206,14 @@ const I18N: Record<Language, Record<string, string>> = {
     persona_debate: "Чемпион по Дебатам",
     persona_eloquence: "Мастер Изящной Словесности",
     persona_emdr_therapist: "Психотерапевт (ДПДГ Протокол)",
+    useProxy: "Использовать прокси",
+    proxyDesc: "Прокси через Cloudflare Worker обходит блокировки",
+    proxyAutoDetect: "(автоопределение по языку/таймзоне)",
+    proxyManual: "(установлено вручную)",
+    proxyResetToAuto: "Сбросить на авто",
+    proxyEnabled: "✅ Запросы идут через прокси",
+    proxyDisabled: "⚠️ Прямое подключение к Google API",
+    proxyReloadRequired: "Перезагрузите страницу для применения настроек",
   }
 };
 
@@ -274,6 +291,8 @@ export const App: React.FC = () => {
 
   const [textInputValue, setTextInputValue] = useState('');
   const [copyButtonText, setCopyButtonText] = useState('');
+  
+  const [proxyConfig, setProxyConfig] = useState<ProxyConfig>(() => getProxyConfig());
 
   const outputAudioContextRef = useRef<AudioContext | null>(null);
   const nextStartTimeRef = useRef(0);
@@ -317,6 +336,21 @@ export const App: React.FC = () => {
     localStorage.removeItem('customApiKey');
     setCustomApiKey(DEFAULT_GEMINI_API_KEY);
     log(t.resetKeySuccess, 'INFO');
+  }, [log, t]);
+
+  const handleProxyToggle = useCallback((enabled: boolean) => {
+    setProxyEnabled(enabled);
+    const updated = getProxyConfig();
+    setProxyConfig(updated);
+    log(enabled ? t.proxyEnabled : t.proxyDisabled, 'INFO');
+    log(t.proxyReloadRequired, 'INFO');
+  }, [log, t]);
+
+  const handleProxyReset = useCallback(() => {
+    resetProxyToAuto();
+    const updated = getProxyConfig();
+    setProxyConfig(updated);
+    log(t.proxyResetToAuto, 'INFO');
   }, [log, t]);
 
   const stopPlayback = useCallback(() => {
@@ -797,6 +831,37 @@ export const App: React.FC = () => {
               <select id="voice" value={selectedVoice} onChange={handleVoiceChange} className="w-full bg-gray-700 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500">
                 {VOICES.map(voice => <option key={voice} value={voice}>{voice}</option>)}
               </select>
+            </div>
+            
+            <div className="mt-4 p-3 bg-gray-700 rounded-md space-y-2">
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="font-medium">{t.useProxy}</div>
+                  <div className="text-xs text-gray-400">{proxyConfig.autoDetectRussia ? t.proxyAutoDetect : t.proxyManual}</div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={proxyConfig.enabled}
+                  onChange={(e) => handleProxyToggle(e.target.checked)}
+                  className="w-4 h-4 text-green-600 bg-gray-700 border-gray-600 rounded focus:ring-green-500"
+                />
+              </div>
+              <p className="text-xs text-gray-400">{t.proxyDesc}</p>
+              {!proxyConfig.autoDetectRussia && (
+                <button
+                  onClick={handleProxyReset}
+                  className="text-xs text-blue-400 hover:text-blue-300"
+                >
+                  {t.proxyResetToAuto}
+                </button>
+              )}
+              <div className="text-xs text-gray-500">
+                {proxyConfig.enabled ? t.proxyEnabled : t.proxyDisabled}
+              </div>
+              <div className="text-xs text-gray-500">{t.proxyReloadRequired}</div>
+              <div className="text-[10px] text-gray-500 break-all">
+                {proxyConfig.workerUrl}
+              </div>
             </div>
             
             {personaSupportsRateAndPitch() && (
