@@ -10,6 +10,7 @@ import { ProgressCard } from './components/ProgressCard';
 import { ServiceStatusIndicator } from './components/ServiceStatusIndicator';
 import { SettingsModal } from './components/SettingsModal';
 import { PersonaInfoModal } from './components/PersonaInfoModal';
+import { VoiceSelector } from './components/VoiceSelector';
 
 type Language = 'en' | 'ru';
 type PersonaView = 'select' | 'edit' | 'add';
@@ -318,6 +319,7 @@ export const App: React.FC = () => {
 
   const [selectedAssistantId, setSelectedAssistantId] = useState<string>('');
   const [selectedVoice, setSelectedVoice] = useState<string>(() => localStorage.getItem('selectedVoice') || 'Zephyr');
+  const [previewingVoice, setPreviewingVoice] = useState<string | null>(null);
   const [speakingRate, setSpeakingRate] = useState<string>(() => localStorage.getItem('speakingRate') || '1.0');
   const [pitch, setPitch] = useState<string>(() => localStorage.getItem('pitch') || '0');
   const [lang, setLang] = useState<Language>(() => (localStorage.getItem('language') as Language) || 'en');
@@ -550,8 +552,7 @@ export const App: React.FC = () => {
     }
   }, [log]);
   
-  const handleVoiceChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newVoice = e.target.value;
+  const handleVoiceChange = useCallback((newVoice: string) => {
     setSelectedVoice(newVoice);
     try {
         localStorage.setItem('selectedVoice', newVoice);
@@ -559,6 +560,59 @@ export const App: React.FC = () => {
         log(`Failed to save selectedVoice: ${(err as Error).message}`, 'ERROR');
     }
   }, [log]);
+
+  const previewVoice = useCallback(async (voiceName: string) => {
+    if (!ai || previewingVoice) return;
+    
+    setPreviewingVoice(voiceName);
+    log(`Previewing voice: ${voiceName}`, 'INFO');
+    
+    try {
+      const previewText = lang === 'ru' 
+        ? "Привет! Я голосовой ассистент. Это демонстрация моего голоса."
+        : "Hello! I'm a voice assistant. This is a demonstration of my voice.";
+      
+      const speechConfig = {
+        voiceConfig: { 
+          prebuiltVoiceConfig: { 
+            voiceName: voiceName 
+          } 
+        },
+      };
+      
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash-preview-tts",
+        contents: [{ parts: [{ text: previewText }] }],
+        config: {
+          responseModalities: [Modality.AUDIO],
+          speechConfig: speechConfig,
+        },
+      });
+
+      const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+      if (base64Audio) {
+        // Create a separate audio context for preview to avoid conflicts
+        const previewAudioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
+        const audioBuffer = await decodeAudioData(decode(base64Audio), previewAudioContext, 24000, 1);
+        const source = previewAudioContext.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(previewAudioContext.destination);
+        
+        source.onended = () => {
+          previewAudioContext.close();
+          setPreviewingVoice(null);
+        };
+        
+        source.start();
+      } else {
+        log("Preview TTS API response did not contain audio data.", 'INFO');
+        setPreviewingVoice(null);
+      }
+    } catch (error: any) {
+      log(`Error previewing voice: ${error.message}`, 'ERROR');
+      setPreviewingVoice(null);
+    }
+  }, [ai, lang, log, previewingVoice]);
 
   const handleSpeakingRateChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const newRate = e.target.value;
@@ -865,44 +919,24 @@ export const App: React.FC = () => {
         )}
         
         {(personaView === 'select') && (
-            <>
-            <div>
-              <label htmlFor="voice" className="block text-sm font-medium mb-1 mt-4">{t.voiceSelection}</label>
-              <select id="voice" value={selectedVoice} onChange={handleVoiceChange} className="w-full bg-gray-700 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500" disabled={voicesLoading}>
-                {voicesLoading ? (
-                  <option>Loading voices...</option>
-                ) : voicesError ? (
-                  <option>Error loading voices</option>
-                ) : (
-                  <>
-                    <optgroup label="Female Voices">
-                      {AVAILABLE_VOICES
-                        .filter(v => v.gender === 'Female')
-                        .map(v => (
-                          <option key={v.name} value={v.name} title={v.description}>
-                            {v.name} - {v.description}
-                          </option>
-                        ))}
-                    </optgroup>
-                    <optgroup label="Male Voices">
-                      {AVAILABLE_VOICES
-                        .filter(v => v.gender === 'Male')
-                        .map(v => (
-                          <option key={v.name} value={v.name} title={v.description}>
-                            {v.name} - {v.description}
-                          </option>
-                        ))}
-                    </optgroup>
-                  </>
-                )}
-              </select>
-              {voicesLoading && (
-                <p className="text-xs text-gray-400 mt-1">Discovering available voices...</p>
-              )}
-              {voicesError && (
-                <p className="text-xs text-red-400 mt-1">Failed to load voices: {voicesError}</p>
-              )}
-            </div>
+                     <>
+                     <div>
+                       <VoiceSelector
+                         selectedVoice={selectedVoice}
+                         onVoiceChange={handleVoiceChange}
+                         lang={lang}
+                         t={t}
+                         onPreviewVoice={previewVoice}
+                         previewingVoice={previewingVoice}
+                         disabled={voicesLoading || !ai}
+                       />
+                       {voicesLoading && (
+                         <p className="text-xs text-gray-400 mt-1">Discovering available voices...</p>
+                       )}
+                       {voicesError && (
+                         <p className="text-xs text-red-400 mt-1">Failed to load voices: {voicesError}</p>
+                       )}
+                     </div>
             
             {personaSupportsRateAndPitch() && (
               <>
