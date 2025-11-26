@@ -18,7 +18,7 @@ type Language = 'en' | 'ru';
 type PersonaView = 'select' | 'edit' | 'add';
 
 // Default API key (restricted to project domain for security)
-const DEFAULT_GEMINI_API_KEY = 'AIzaSyB0zVRuswGxr1phrdeFanIsE59OwehCFH8';
+const DEFAULT_GEMINI_API_KEY = 'AIzaSyDu-jb2DORZ50tYc6SobKQsXDC6V1D_go0';
 
 // --- Local Hook for Gemini AI Initialization ---
 const useGemini = (customApiKey: string | null) => {
