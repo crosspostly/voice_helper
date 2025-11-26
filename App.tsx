@@ -4,6 +4,7 @@ import { Transcript, Assistant } from './types';
 import { decode, decodeAudioData } from './services/audioUtils';
 import { useLiveSession, Status } from './hooks/useLiveSession';
 import { useAvailableVoices } from './hooks/useAvailableVoices';
+import { useVoiceSamplePreloader } from './hooks/useVoiceSamplePreloader';
 import { AVAILABLE_VOICES, VOICE_NAMES } from './src/constants/voices';
 import { StatusIndicator } from './components/StatusIndicator';
 import { ProgressCard } from './components/ProgressCard';
@@ -11,6 +12,7 @@ import { ServiceStatusIndicator } from './components/ServiceStatusIndicator';
 import { SettingsModal } from './components/SettingsModal';
 import { PersonaInfoModal } from './components/PersonaInfoModal';
 import { VoiceSelector } from './components/VoiceSelector';
+import { VoicePreloaderControls } from './components/VoicePreloaderControls';
 
 type Language = 'en' | 'ru';
 type PersonaView = 'select' | 'edit' | 'add';
@@ -346,6 +348,7 @@ export const App: React.FC = () => {
   
   const ai = useGemini(customApiKey);
   const { voices, loading: voicesLoading, error: voicesError } = useAvailableVoices(ai);
+  const voicePreloader = useVoiceSamplePreloader({ ai, lang, enabled: !!ai });
   const t = I18N[lang];
 
   const log = useCallback((message: string, level: 'INFO' | 'ERROR' | 'DEBUG' = 'DEBUG') => {
@@ -922,20 +925,34 @@ export const App: React.FC = () => {
                      <>
                      <div>
                        <VoiceSelector
-                         selectedVoice={selectedVoice}
-                         onVoiceChange={handleVoiceChange}
-                         lang={lang}
-                         t={t}
-                         onPreviewVoice={previewVoice}
-                         previewingVoice={previewingVoice}
-                         disabled={voicesLoading || !ai}
-                       />
+                                                 selectedVoice={selectedVoice}
+                                                 onVoiceChange={handleVoiceChange}
+                                                 lang={lang}
+                                                 t={t}
+                                                 onPreviewVoice={previewVoice}
+                                                 previewingVoice={previewingVoice}
+                                                 disabled={voicesLoading || !ai}
+                                                 isVoicePreloaded={voicePreloader.isVoicePreloaded}
+                                                 onPlayCachedSample={voicePreloader.playCachedSample}
+                                               />
                        {voicesLoading && (
-                         <p className="text-xs text-gray-400 mt-1">Discovering available voices...</p>
-                       )}
-                       {voicesError && (
-                         <p className="text-xs text-red-400 mt-1">Failed to load voices: {voicesError}</p>
-                       )}
+                                                 <p className="text-xs text-gray-400 mt-1">Discovering available voices...</p>
+                                               )}
+                                               {voicesError && (
+                                                 <p className="text-xs text-red-400 mt-1">Failed to load voices: {voicesError}</p>
+                                               )}
+
+                                               {/* Voice Preloader Controls */}
+                                               <VoicePreloaderControls
+                                                 preloadedCount={voicePreloader.preloadedCount}
+                                                 totalCount={voicePreloader.totalCount}
+                                                 isPreloadingAll={voicePreloader.isPreloadingAll}
+                                                 isPreloading={Object.values(voicePreloader.preloadingStatus).some((s: any) => s.isPreloading)}
+                                                 onPreloadAll={voicePreloader.preloadAllVoiceSamples}
+                                                 disabled={!ai}
+                                                 lang={lang}
+                                                 t={t}
+                                               />
                      </div>
             
             {personaSupportsRateAndPitch() && (

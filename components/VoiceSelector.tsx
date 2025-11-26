@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { AVAILABLE_VOICES, Voice } from '../src/constants/voices';
 
 interface VoiceSelectorProps {
@@ -9,6 +9,8 @@ interface VoiceSelectorProps {
   onPreviewVoice: (voiceName: string) => Promise<void>;
   previewingVoice: string | null;
   disabled?: boolean;
+  isVoicePreloaded?: (voiceName: string) => boolean;
+  onPlayCachedSample?: (voiceName: string) => Promise<boolean>;
 }
 
 export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
@@ -18,10 +20,13 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
   t,
   onPreviewVoice,
   previewingVoice,
-  disabled = false
+  disabled = false,
+  isVoicePreloaded,
+  onPlayCachedSample
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedGender, setSelectedGender] = useState<'All' | 'Male' | 'Female'>('All');
+  const voiceRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const getVoiceDescription = (voice: Voice): string => {
     const descKey = `voice${voice.name}Desc`;
@@ -43,6 +48,33 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
     acc[voice.gender].push(voice);
     return acc;
   }, {} as Record<string, Voice[]>);
+
+  // Scroll to selected voice when it changes
+  useEffect(() => {
+    if (selectedVoice && voiceRefs.current[selectedVoice]) {
+      setTimeout(() => {
+        voiceRefs.current[selectedVoice]?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center'
+        });
+      }, 100);
+    }
+  }, [selectedVoice]);
+
+  // Handle preview button click
+  const handlePreviewClick = async (voiceName: string) => {
+    // If we have a cached sample and the function to play it, use that first
+    if (isVoicePreloaded?.(voiceName) && onPlayCachedSample) {
+      const success = await onPlayCachedSample(voiceName);
+      if (success) {
+        return; // Successfully played cached sample
+      }
+      // If cached sample failed, fall back to generating new one
+    }
+    
+    // Fall back to original preview method
+    onPreviewVoice(voiceName);
+  };
 
   return (
     <div className="space-y-3">
@@ -79,7 +111,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
         </div>
       </div>
 
-      {/* Voice List */}
+            {/* Voice List */}
       <div className="max-h-80 overflow-y-auto space-y-2 pr-2">
         {Object.entries(groupedVoices).map(([gender, voices]) => (
           <div key={gender}>
@@ -91,6 +123,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
               {voices.map(voice => (
                 <div
                   key={voice.name}
+                  ref={(el) => voiceRefs.current[voice.name] = el}
                   className={`flex items-center p-2 rounded-md border transition-colors ${
                     selectedVoice === voice.name
                       ? 'bg-green-900 border-green-600'
@@ -115,19 +148,29 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
                   </div>
                   
                   <button
-                    onClick={() => onPreviewVoice(voice.name)}
+                    onClick={() => handlePreviewClick(voice.name)}
                     disabled={disabled || previewingVoice === voice.name}
                     className={`ml-2 p-1.5 rounded-md transition-colors ${
                       previewingVoice === voice.name
                         ? 'bg-yellow-600 text-white'
+                        : isVoicePreloaded?.(voice.name)
+                        ? 'bg-green-600 text-white'
                         : 'bg-gray-600 text-gray-300 hover:bg-gray-500'
                     } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    title={lang === 'ru' ? 'Прослушать голос' : 'Preview voice'}
+                    title={
+                      isVoicePreloaded?.(voice.name) 
+                        ? (lang === 'ru' ? 'Прослушать (предзагружено)' : 'Preview (preloaded)')
+                        : (lang === 'ru' ? 'Прослушать голос' : 'Preview voice')
+                    }
                   >
                     {previewingVoice === voice.name ? (
                       <div className="w-4 h-4 flex items-center justify-center">
                         <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
                       </div>
+                    ) : isVoicePreloaded?.(voice.name) ? (
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                      </svg>
                     ) : (
                       <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
@@ -140,6 +183,20 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
           </div>
         ))}
       </div>
+      
+      {/* Voice Preloader Status */}
+      {isVoicePreloaded && (
+        <div className="mt-3 p-2 bg-gray-700 rounded-md">
+          <div className="text-xs text-gray-300 mb-1">
+            {lang === 'ru' ? 'Предзагруженные примеры голосов:' : 'Preloaded voice samples:'}
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="text-xs text-gray-400">
+              {AVAILABLE_VOICES.filter(v => isVoicePreloaded(v.name)).length} / {AVAILABLE_VOICES.length} {lang === 'ru' ? 'голосов' : 'voices'}
+            </div>
+          </div>
+        </div>
+      )}
       
       {filteredVoices.length === 0 && (
         <div className="text-center text-gray-400 py-4">
