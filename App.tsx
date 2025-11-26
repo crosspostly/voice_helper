@@ -18,7 +18,7 @@ type Language = 'en' | 'ru';
 type PersonaView = 'select' | 'edit' | 'add';
 
 // Default API key (restricted to project domain for security)
-const DEFAULT_GEMINI_API_KEY = 'AIzaSyCrPJN5yn3QAmHEydsmQ8XK_vQPCJvamSA';
+const DEFAULT_GEMINI_API_KEY = 'AIzaSyB0zVRuswGxr1phrdeFanIsE59OwehCFH8';
 
 // --- Local Hook for Gemini AI Initialization ---
 const useGemini = (customApiKey: string | null) => {
@@ -867,7 +867,7 @@ export const App: React.FC = () => {
             <h2 className="text-xl font-bold">{t.personaTitle}</h2>
             <div className="flex items-center space-x-2">
                  <button onClick={() => setIsSettingsModalOpen(true)} className="p-2 rounded-full hover:bg-gray-700">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="http://www.w3.org/2000/svg" fill="currentColor"><path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0L7.86 5.89c-.38.23-.8.43-1.25.59L3.5 7.1c-1.51.22-2.14 2.03-1.06 3.09l2.12 2.12c.16.16.27.36.33.58l.43 1.9c.22 1.01 1.43 1.55 2.4.9l2.36-1.52c.23-.15.5-.23.77-.23s.54.08.77.23l2.36 1.52c.97.65 2.18.11 2.4-.9l.43-1.9c.06-.22.17-.42.33-.58l2.12-2.12c1.08-1.06.45-2.87-1.06-3.09l-3.11-.62c-.45-.09-.87-.28-1.25-.59l-.65-2.72zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" /></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0L7.86 5.89c-.38.23-.8.43-1.25.59L3.5 7.1c-1.51.22-2.14 2.03-1.06 3.09l2.12 2.12c.16.16.27.36.33.58l.43 1.9c.22 1.01 1.43 1.55 2.4.9l2.36-1.52c.23-.15.5-.23.77-.23s.54.08.77.23l2.36 1.52c.97.65 2.18.11 2.4-.9l.43-1.9c.06-.22.17-.42.33-.58l2.12-2.12c1.08-1.06.45-2.87-1.06-3.09l-3.11-.62c-.45-.09-.87-.28-1.25-.59l-.65-2.72zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" /></svg>
                 </button>
                 <select value={lang} onChange={e => setLang(e.target.value as Language)} className="bg-gray-700 text-white rounded-md p-1 text-sm focus:outline-none">
                     <option value="en">EN</option>
@@ -912,10 +912,10 @@ export const App: React.FC = () => {
                         setPersonaView('edit');
                     }
                 }} className="p-2 bg-gray-700 rounded-md hover:bg-gray-600" aria-label={t.editPersona}>
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="http://www.w3.org/2000/svg" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fillRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" /></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fillRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" /></svg>
                 </button>
                  <button onClick={() => setIsPersonaInfoModalOpen(true)} className="p-2 bg-gray-700 rounded-md hover:bg-gray-600" aria-label="Persona Info">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="http://www.w3.org/2000/svg" fill="currentColor"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" /></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" /></svg>
                 </button>
             </div>
           </div>
@@ -1106,13 +1106,13 @@ export const App: React.FC = () => {
               onClick={handleMicButtonClick}
               className={`p-4 rounded-full transition-colors ${status !== 'IDLE' && status !== 'ERROR' ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}
             >
-              {status !== 'IDLE' && status !== 'ERROR' ? 
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="http://www.w3.org/2000/svg" fill="currentColor"><path fillRule="evenodd" d="M5 10a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z" clipRule="evenodd" /></svg> :
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
-              }
+              {status !== 'IDLE' && status !== 'ERROR' ?
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5 10a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z" clipRule="evenodd" /></svg> :
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                              }
             </button>
             <button onClick={sendTextMessage} className="bg-green-600 hover:bg-green-700 p-3 rounded-full">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="http://www.w3.org/2000/svg" fill="currentColor"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg>
             </button>
           </div>
           <div className="mt-2 text-xs text-gray-500">
