@@ -8,7 +8,9 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest",
-    "test:ui": "vitest --ui"
+    "test:ui": "vitest --ui",
+    "preload-voices": "node scripts/preload-voices.js public/voice-samples",
+    "deploy-with-voices": "./scripts/deploy-with-voices.sh"
   },
   "dependencies": {
     "@google/genai": "^1.27.0",

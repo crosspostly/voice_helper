@@ -1,0 +1,12 @@
+{
+  "voices": [
+    { "name": "Achernar", "gender": "Female", "description": "Clear mid-range; friendly, engaging" },
+    { "name": "Aoede", "gender": "Female", "description": "Clear, conversational, thoughtful" },
+    { "name": "Autonoe", "gender": "Female", "description": "Mature, deeper; calm" },
+    { "name": "Achird", "gender": "Male", "description": "Youthful, inquisitive, friendly" },
+    { "name": "Algenib", "gender": "Male", "description": "Warm, confident, deep authority" }
+  ],
+  "generatedAt": "2024-11-26T14:05:00.000Z",
+  "totalVoices": 5,
+  "note": "This is a demo index with limited voices. Full voice list available in the application."
+}
