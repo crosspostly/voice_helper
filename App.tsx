@@ -3,6 +3,7 @@ import { GoogleGenAI, Chat, Modality, Content } from '@google/genai';
 import { Transcript, Assistant } from './types';
 import { decode, decodeAudioData } from './services/audioUtils';
 import { useLiveSession, Status } from './hooks/useLiveSession';
+import { useAvailableVoices } from './hooks/useAvailableVoices';
 import { StatusIndicator } from './components/StatusIndicator';
 import { ProgressCard } from './components/ProgressCard';
 import { ServiceStatusIndicator } from './components/ServiceStatusIndicator';
@@ -48,8 +49,6 @@ const PRESET_ASSISTANTS: Omit<Assistant, 'id'>[] = [
   { titleKey: "persona_debate", prompt: "You are a world-class debate champion. You can argue for or against any position, regardless of your own 'opinion'. Your arguments are logical, well-structured, and persuasive. You identify weaknesses in my arguments and challenge me to defend my position." },
   { titleKey: "persona_emdr_therapist", prompt: "Основная роль и контекст\nТы — ДПДГ-терапевт, работающий по восьмифазному протоколу Ф. Шапиро, с фокусом на безопасность, структуру и поддержку клиента.  \nВажно: не заменяешь очного специалиста; при рисках и остром состоянии рекомендована профессиональная помощь и кризисные службы." },
 ];
-
-const VOICES = ['Zephyr', 'Puck', 'Charon', 'Kore', 'Fenrir'];
 
 const I18N: Record<Language, Record<string, string>> = {
   en: {
@@ -257,7 +256,7 @@ export const App: React.FC = () => {
   });
 
   const [selectedAssistantId, setSelectedAssistantId] = useState<string>('');
-  const [selectedVoice, setSelectedVoice] = useState<string>(() => localStorage.getItem('selectedVoice') || VOICES[0]);
+  const [selectedVoice, setSelectedVoice] = useState<string>(() => localStorage.getItem('selectedVoice') || 'Zephyr');
   const [speakingRate, setSpeakingRate] = useState<string>(() => localStorage.getItem('speakingRate') || '1.0');
   const [pitch, setPitch] = useState<string>(() => localStorage.getItem('pitch') || '0');
   const [lang, setLang] = useState<Language>(() => (localStorage.getItem('language') as Language) || 'en');
@@ -283,6 +282,7 @@ export const App: React.FC = () => {
   const playAudioRef = useRef<((base64Audio: string) => Promise<void>) | null>(null);
   
   const ai = useGemini(customApiKey);
+  const { voices, loading: voicesLoading, error: voicesError } = useAvailableVoices(ai);
   const t = I18N[lang];
 
   const log = useCallback((message: string, level: 'INFO' | 'ERROR' | 'DEBUG' = 'DEBUG') => {
@@ -457,6 +457,20 @@ export const App: React.FC = () => {
       transcriptEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [transcript]);
+
+  // Validate selectedVoice when voices are loaded
+  useEffect(() => {
+    if (voices.length > 0 && !voices.includes(selectedVoice)) {
+      // If current selected voice is not in the available voices, select the first available voice
+      const firstVoice = voices[0];
+      setSelectedVoice(firstVoice);
+      try {
+        localStorage.setItem('selectedVoice', firstVoice);
+      } catch (err) {
+        log(`Failed to save selectedVoice: ${(err as Error).message}`, 'ERROR');
+      }
+    }
+  }, [voices, selectedVoice, log]);
 
   const personaSupportsRateAndPitch = useCallback(() => false, []);
   
@@ -794,9 +808,21 @@ export const App: React.FC = () => {
             <>
             <div>
               <label htmlFor="voice" className="block text-sm font-medium mb-1 mt-4">{t.voiceSelection}</label>
-              <select id="voice" value={selectedVoice} onChange={handleVoiceChange} className="w-full bg-gray-700 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500">
-                {VOICES.map(voice => <option key={voice} value={voice}>{voice}</option>)}
+              <select id="voice" value={selectedVoice} onChange={handleVoiceChange} className="w-full bg-gray-700 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500" disabled={voicesLoading}>
+                {voicesLoading ? (
+                  <option>Loading voices...</option>
+                ) : voicesError ? (
+                  <option>Error loading voices</option>
+                ) : (
+                  voices.map(voice => <option key={voice} value={voice}>{voice}</option>)
+                )}
               </select>
+              {voicesLoading && (
+                <p className="text-xs text-gray-400 mt-1">Discovering available voices...</p>
+              )}
+              {voicesError && (
+                <p className="text-xs text-red-400 mt-1">Failed to load voices: {voicesError}</p>
+              )}
             </div>
             
             {personaSupportsRateAndPitch() && (
@@ -984,10 +1010,10 @@ export const App: React.FC = () => {
         getPersonaDisplayPrompt={getPersonaDisplayPrompt}
         t={t}
         />
-      <SettingsModal 
-        isOpen={isSettingsModalOpen} 
-        onClose={() => setIsSettingsModalOpen(false)} 
-        lang={lang} 
+      <SettingsModal
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
+        lang={lang}
         t={t}
         isDevMode={isDevMode}
         setIsDevMode={setIsDevMode}
@@ -1009,7 +1035,8 @@ export const App: React.FC = () => {
         onCustomApiKeyChange={handleCustomApiKeyChange}
         onResetApiKey={handleResetApiKey}
         log={log}
-        />
+        voices={voices}
+      />
     </div>
   );
 };

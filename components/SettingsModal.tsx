@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
 
-const VOICES = ['Zephyr', 'Puck', 'Charon', 'Kore', 'Fenrir'];
-
 interface SettingsModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -17,6 +15,7 @@ interface SettingsModalProps {
     onCustomApiKeyChange: (key: string) => void;
     onResetApiKey: () => void;
     log: (message: string, level?: 'INFO' | 'ERROR' | 'DEBUG') => void;
+    voices: string[];
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ 
@@ -33,7 +32,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     customApiKey,
     onCustomApiKeyChange,
     onResetApiKey,
-    log
+    log,
+    voices
 }) => {
     const [isAdultMode, setIsAdultMode] = useState(() => localStorage.getItem('isAdultMode') === 'true');
     const [showSaveOptions, setShowSaveOptions] = useState(false);
@@ -59,7 +59,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             const settings = {
                 assistants: JSON.parse(localStorage.getItem('assistants') || '[]'),
                 selectedAssistantId: localStorage.getItem('selectedAssistantId') || '',
-                selectedVoice: localStorage.getItem('selectedVoice') || VOICES[0],
+                selectedVoice: localStorage.getItem('selectedVoice') || voices[0],
                 speakingRate: localStorage.getItem('speakingRate') || '1.0',
                 pitch: localStorage.getItem('pitch') || '0',
                 isAdultMode,
