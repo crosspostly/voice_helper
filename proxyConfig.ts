@@ -7,8 +7,8 @@ export interface ProxyConfig {
   autoDetectRussia: boolean;
 }
 
-// URL Cloudflare Worker
-const CLOUDFLARE_WORKER_URL = 'https://subbot.sheepoff.workers.dev/';
+// URL Cloudflare Worker (без слэша в конце чтобы избежать двойных слэшей)
+const CLOUDFLARE_WORKER_URL = 'https://subbot.sheepoff.workers.dev';
 
 const DEFAULT_PROXY_CONFIG: ProxyConfig = {
   enabled: false,
@@ -128,7 +128,24 @@ export const transformUrlForProxy = (originalUrl: string): string => {
       .replace(/^https?:\/\//, '')
       .replace(/\/$/, '');
 
-    return originalUrl.replace('generativelanguage.googleapis.com', sanitizedWorkerHost);
+    let transformedUrl = originalUrl.replace('generativelanguage.googleapis.com', sanitizedWorkerHost);
+    
+    // Fix double slashes after domain (e.g., workers.dev//ws -> workers.dev/ws)
+    transformedUrl = transformedUrl.replace(/workers\.dev\/\//g, 'workers.dev/');
+    
+    // Fix any remaining double slashes after protocol (except after https:// or wss://)
+    transformedUrl = transformedUrl.replace(/(https?:\/\/|wss?:\/\/)([^\/]+)\/\//g, '$1$2/');
+    
+    // Fix all other double slashes in the path (but not the protocol part)
+    const protocolMatch = transformedUrl.match(/^(https?:\/\/|wss?:\/\/)/);
+    if (protocolMatch) {
+      const protocol = protocolMatch[1];
+      const restOfUrl = transformedUrl.substring(protocol.length);
+      const fixedRest = restOfUrl.replace(/\/\//g, '/');
+      transformedUrl = protocol + fixedRest;
+    }
+    
+    return transformedUrl;
   }
 
   return originalUrl;
