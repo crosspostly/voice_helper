@@ -4,6 +4,7 @@ import { Transcript, Assistant } from './types';
 import { decode, decodeAudioData } from './services/audioUtils';
 import { useLiveSession, Status } from './hooks/useLiveSession';
 import { useAvailableVoices } from './hooks/useAvailableVoices';
+import { AVAILABLE_VOICES, VOICE_NAMES } from './src/constants/voices';
 import { StatusIndicator } from './components/StatusIndicator';
 import { ProgressCard } from './components/ProgressCard';
 import { ServiceStatusIndicator } from './components/ServiceStatusIndicator';
@@ -123,6 +124,36 @@ const I18N: Record<Language, Record<string, string>> = {
     persona_debate: "Debate Champion",
     persona_eloquence: "Master of Eloquent Expression",
     persona_emdr_therapist: "Psychotherapist (EMDR Protocol)",
+    // Voice descriptions
+    voiceAchernarDesc: "Clear mid-range; friendly, engaging",
+    voiceAoedeDesc: "Clear, conversational, thoughtful",
+    voiceAutonoeDesc: "Mature, deeper; calm",
+    voiceCallirrhoeDesc: "Confident, professional",
+    voiceDespinaDesc: "Warm, inviting, smooth",
+    voiceErinomeDesc: "Professional, articulate",
+    voiceGacruxDesc: "Smooth, confident, authoritative",
+    voiceKoreDesc: "Energetic, youthful, higher pitch",
+    voiceLaomedeiaDesc: "Clear, inquisitive; conversational",
+    voiceLedaDesc: "Youthful, clear; professional",
+    voicePulcherrimaDesc: "Bright, energetic, higher pitch",
+    voiceSulafatDesc: "Warm, confident, persuasive",
+    voiceVindemiatrixDesc: "Calm, thoughtful, lower pitch",
+    voiceZephyrDesc: "Energetic, bright, perky",
+    voiceAchirdDesc: "Youthful, inquisitive, friendly",
+    voiceAlgenibDesc: "Warm, confident, deep authority",
+    voiceAlnilamDesc: "Energetic, clear",
+    voiceCharonDesc: "Smooth, assured, approachable",
+    voiceEnceladusDesc: "Energetic, enthusiastic",
+    voiceFenrirDesc: "Friendly, clear, conversational",
+    voiceIapetusDesc: "Casual, everyman",
+    voiceOrusDesc: "Mature, resonant, authoritative",
+    voicePuckDesc: "Upbeat, playful, confident",
+    voiceRasalgethiDesc: "Conversational, inquisitive",
+    voiceSadachbiaDesc: "Deeper, raspy, cool",
+    voiceSadaltagerDesc: "Friendly, articulate",
+    voiceSchedarDesc: "Steady, approachable",
+    voiceUmbrielDesc: "Smooth, calm, friendly",
+    voiceZubenelgenubiDesc: "Deep, resonant, commanding",
   },
   ru: {
     title: "Голосовой Ассистент",
@@ -196,6 +227,36 @@ const I18N: Record<Language, Record<string, string>> = {
     persona_debate: "Чемпион по Дебатам",
     persona_eloquence: "Мастер Изящной Словесности",
     persona_emdr_therapist: "Психотерапевт (ДПДГ Протокол)",
+    // Voice descriptions
+    voiceAchernarDesc: "Ясный средний диапазон; дружелюбный, привлекательный",
+    voiceAoedeDesc: "Ясный, разговорный, вдумчивый",
+    voiceAutonoeDesc: "Зрелый, глубокий; спокойный",
+    voiceCallirrhoeDesc: "Уверенный, профессиональный",
+    voiceDespinaDesc: "Тёплый, приглашающий, гладкий",
+    voiceErinomeDesc: "Профессиональный, чёткий",
+    voiceGacruxDesc: "Гладкий, уверенный, авторитетный",
+    voiceKoreDesc: "Энергичный, юношеский, высокий тон",
+    voiceLaomedeiaDesc: "Ясный, любопытный; разговорный",
+    voiceLedaDesc: "Юношеский, ясный; профессиональный",
+    voicePulcherrimaDesc: "Яркий, энергичный, высокий тон",
+    voiceSulafatDesc: "Тёплый, уверенный, убедительный",
+    voiceVindemiatrixDesc: "Спокойный, вдумчивый, низкий тон",
+    voiceZephyrDesc: "Энергичный, яркий, живой",
+    voiceAchirdDesc: "Юношеский, любопытный, дружелюбный",
+    voiceAlgenibDesc: "Тёплый, уверенный, глубокий авторитет",
+    voiceAlnilamDesc: "Энергичный, ясный",
+    voiceCharonDesc: "Гладкий, уверенный, подходящий",
+    voiceEnceladusDesc: "Энергичный, энтузиастичный",
+    voiceFenrirDesc: "Дружелюбный, ясный, разговорный",
+    voiceIapetusDesc: "Повседневный, обычный",
+    voiceOrusDesc: "Зрелый, гулкий, авторитетный",
+    voicePuckDesc: "Бодрый, игривый, уверенный",
+    voiceRasalgethiDesc: "Разговорный, любопытный",
+    voiceSadachbiaDesc: "Глубокий, хриплый, крутой",
+    voiceSadaltagerDesc: "Дружелюбный, чёткий",
+    voiceSchedarDesc: "Стабильный, подходящий",
+    voiceUmbrielDesc: "Гладкий, спокойный, дружелюбный",
+    voiceZubenelgenubiDesc: "Глубокий, гулкий, властный",
   }
 };
 
@@ -460,12 +521,11 @@ export const App: React.FC = () => {
 
   // Validate selectedVoice when voices are loaded
   useEffect(() => {
-    if (voices.length > 0 && !voices.includes(selectedVoice)) {
-      // If current selected voice is not in the available voices, select the first available voice
-      const firstVoice = voices[0];
-      setSelectedVoice(firstVoice);
+    if (voices.length > 0 && !VOICE_NAMES.includes(selectedVoice)) {
+      // If current selected voice is not in the available voices, fallback to Zephyr
+      setSelectedVoice('Zephyr');
       try {
-        localStorage.setItem('selectedVoice', firstVoice);
+        localStorage.setItem('selectedVoice', 'Zephyr');
       } catch (err) {
         log(`Failed to save selectedVoice: ${(err as Error).message}`, 'ERROR');
       }
@@ -814,7 +874,26 @@ export const App: React.FC = () => {
                 ) : voicesError ? (
                   <option>Error loading voices</option>
                 ) : (
-                  voices.map(voice => <option key={voice} value={voice}>{voice}</option>)
+                  <>
+                    <optgroup label="Female Voices">
+                      {AVAILABLE_VOICES
+                        .filter(v => v.gender === 'Female')
+                        .map(v => (
+                          <option key={v.name} value={v.name} title={v.description}>
+                            {v.name} - {v.description}
+                          </option>
+                        ))}
+                    </optgroup>
+                    <optgroup label="Male Voices">
+                      {AVAILABLE_VOICES
+                        .filter(v => v.gender === 'Male')
+                        .map(v => (
+                          <option key={v.name} value={v.name} title={v.description}>
+                            {v.name} - {v.description}
+                          </option>
+                        ))}
+                    </optgroup>
+                  </>
                 )}
               </select>
               {voicesLoading && (
