@@ -19,6 +19,7 @@
     "jsdom": "^27.1.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "tsx": "^4.20.6",
     "vitest": "^4.0.8"
   },
   "devDependencies": {
