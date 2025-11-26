@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { GoogleGenAI } from '@google/genai';
 import { Modality } from '@google/genai';
 import { voiceSampleCache } from '../services/voiceSampleCache';
+import { preloadedVoiceLoader } from '../services/preloadedVoiceLoader';
 import { AVAILABLE_VOICES } from '../src/constants/voices';
 
 interface UseVoiceSamplePreloaderOptions {
@@ -28,25 +29,34 @@ export const useVoiceSamplePreloader = ({
   const preloadingQueueRef = useRef<string[]>([]);
   const isPreloadingRef = useRef(false);
 
-  // Initialize status for all voices
+  // Initialize status for all voices and load preloaded samples
   useEffect(() => {
-    const initialStatus: Record<string, VoiceSampleStatus> = {};
-    AVAILABLE_VOICES.forEach(voice => {
-      const isCached = !!voiceSampleCache.getSample(voice.name);
-      initialStatus[voice.name] = {
-        voiceName: voice.name,
-        isPreloaded: isCached,
-        isPreloading: false
-      };
-    });
-    setPreloadingStatus(initialStatus);
-    
-    // Count preloaded samples
-    const cachedCount = AVAILABLE_VOICES.filter(voice => 
-      !!voiceSampleCache.getSample(voice.name)
-    ).length;
-    setPreloadedCount(cachedCount);
-  }, []);
+    const initializeVoiceSamples = async () => {
+      // Load pre-generated samples first
+      await preloadedVoiceLoader.loadPreloadedSamples();
+      
+      const initialStatus: Record<string, VoiceSampleStatus> = {};
+      AVAILABLE_VOICES.forEach(voice => {
+        const isCached = !!voiceSampleCache.getSample(voice.name) || 
+                        preloadedVoiceLoader.isVoicePreloaded(voice.name, lang);
+        initialStatus[voice.name] = {
+          voiceName: voice.name,
+          isPreloaded: isCached,
+          isPreloading: false
+        };
+      });
+      setPreloadingStatus(initialStatus);
+      
+      // Count preloaded samples
+      const cachedCount = AVAILABLE_VOICES.filter(voice => 
+        !!voiceSampleCache.getSample(voice.name) || 
+        preloadedVoiceLoader.isVoicePreloaded(voice.name, lang)
+      ).length;
+      setPreloadedCount(cachedCount);
+    };
+
+    initializeVoiceSamples();
+  }, [lang]);
 
   // Generate sample for a single voice
   const generateVoiceSample = useCallback(async (voiceName: string): Promise<string | null> => {
@@ -86,8 +96,8 @@ export const useVoiceSamplePreloader = ({
   const preloadVoiceSample = useCallback(async (voiceName: string): Promise<boolean> => {
     if (!enabled || !ai) return false;
 
-    // Check if already cached
-    if (voiceSampleCache.getSample(voiceName)) {
+    // Check if already cached (either in localStorage or preloaded)
+    if (voiceSampleCache.getSample(voiceName) || preloadedVoiceLoader.isVoicePreloaded(voiceName, lang)) {
       setPreloadingStatus(prev => ({
         ...prev,
         [voiceName]: { ...prev[voiceName], isPreloaded: true, isPreloading: false }
@@ -128,7 +138,7 @@ export const useVoiceSamplePreloader = ({
       }));
       return false;
     }
-  }, [enabled, ai, generateVoiceSample]);
+  }, [enabled, ai, generateVoiceSample, lang]);
 
   // Preload all voices (with queue to avoid overwhelming API)
   const preloadAllVoiceSamples = useCallback(async (): Promise<void> => {
@@ -161,7 +171,13 @@ export const useVoiceSamplePreloader = ({
 
     // Play cached sample
   const playCachedSample = useCallback(async (voiceName: string): Promise<boolean> => {
-    const base64Audio = voiceSampleCache.getSample(voiceName);
+    // Try preloaded samples first
+    let base64Audio = preloadedVoiceLoader.getPreloadedSample(voiceName, lang);
+    
+    if (!base64Audio) {
+      // Try localStorage cache
+      base64Audio = voiceSampleCache.getSample(voiceName);
+    }
     
     if (!base64Audio) {
       // If not cached, try to generate it
@@ -169,14 +185,12 @@ export const useVoiceSamplePreloader = ({
       if (!success) return false;
       
       // Try again after caching
-      const newBase64Audio = voiceSampleCache.getSample(voiceName);
-      if (!newBase64Audio) return false;
-      
-      return playAudioFromBase64(newBase64Audio);
+      base64Audio = voiceSampleCache.getSample(voiceName);
+      if (!base64Audio) return false;
     }
     
     return playAudioFromBase64(base64Audio);
-  }, [preloadVoiceSample]);
+  }, [preloadVoiceSample, lang]);
 
   // Helper to play base64 audio
   const playAudioFromBase64 = useCallback(async (base64Audio: string): Promise<boolean> => {
@@ -229,6 +243,8 @@ export const useVoiceSamplePreloader = ({
     preloadAllVoiceSamples,
     playCachedSample,
     clearCache,
-    isVoicePreloaded: (voiceName: string) => !!voiceSampleCache.getSample(voiceName)
+    isVoicePreloaded: (voiceName: string) => 
+      !!voiceSampleCache.getSample(voiceName) || 
+      preloadedVoiceLoader.isVoicePreloaded(voiceName, lang)
   };
 };

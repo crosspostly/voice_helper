@@ -11,8 +11,8 @@ import { ProgressCard } from './components/ProgressCard';
 import { ServiceStatusIndicator } from './components/ServiceStatusIndicator';
 import { SettingsModal } from './components/SettingsModal';
 import { PersonaInfoModal } from './components/PersonaInfoModal';
-import { VoiceSelector } from './components/VoiceSelector';
-import { VoicePreloaderControls } from './components/VoicePreloaderControls';
+import { VoiceDropdown } from './components/VoiceDropdown';
+import { CompactVoicePreloaderControls } from './components/CompactVoicePreloaderControls';
 
 type Language = 'en' | 'ru';
 type PersonaView = 'select' | 'edit' | 'add';
@@ -924,35 +924,35 @@ export const App: React.FC = () => {
         {(personaView === 'select') && (
                      <>
                      <div>
-                       <VoiceSelector
-                                                 selectedVoice={selectedVoice}
-                                                 onVoiceChange={handleVoiceChange}
-                                                 lang={lang}
-                                                 t={t}
-                                                 onPreviewVoice={previewVoice}
-                                                 previewingVoice={previewingVoice}
-                                                 disabled={voicesLoading || !ai}
-                                                 isVoicePreloaded={voicePreloader.isVoicePreloaded}
-                                                 onPlayCachedSample={voicePreloader.playCachedSample}
-                                               />
-                       {voicesLoading && (
-                                                 <p className="text-xs text-gray-400 mt-1">Discovering available voices...</p>
-                                               )}
-                                               {voicesError && (
-                                                 <p className="text-xs text-red-400 mt-1">Failed to load voices: {voicesError}</p>
-                                               )}
+                                             <VoiceDropdown
+                                                                       selectedVoice={selectedVoice}
+                                                                       onVoiceChange={handleVoiceChange}
+                                                                       lang={lang}
+                                                                       t={t}
+                                                                       onPreviewVoice={previewVoice}
+                                                                       previewingVoice={previewingVoice}
+                                                                       disabled={voicesLoading || !ai}
+                                                                       isVoicePreloaded={voicePreloader.isVoicePreloaded}
+                                                                       onPlayCachedSample={voicePreloader.playCachedSample}
+                                                                     />
+                                             {voicesLoading && (
+                                                                       <p className="text-xs text-gray-400 mt-1">Discovering available voices...</p>
+                                                                     )}
+                                                                     {voicesError && (
+                                                                       <p className="text-xs text-red-400 mt-1">Failed to load voices: {voicesError}</p>
+                                                                     )}
 
-                                               {/* Voice Preloader Controls */}
-                                               <VoicePreloaderControls
-                                                 preloadedCount={voicePreloader.preloadedCount}
-                                                 totalCount={voicePreloader.totalCount}
-                                                 isPreloadingAll={voicePreloader.isPreloadingAll}
-                                                 isPreloading={Object.values(voicePreloader.preloadingStatus).some((s: any) => s.isPreloading)}
-                                                 onPreloadAll={voicePreloader.preloadAllVoiceSamples}
-                                                 disabled={!ai}
-                                                 lang={lang}
-                                                 t={t}
-                                               />
+                                               {/* Compact Voice Preloader Controls */}
+                                                                                              <CompactVoicePreloaderControls
+                                                                                                preloadedCount={voicePreloader.preloadedCount}
+                                                                                                totalCount={voicePreloader.totalCount}
+                                                                                                isPreloadingAll={voicePreloader.isPreloadingAll}
+                                                                                                isPreloading={Object.values(voicePreloader.preloadingStatus).some((s: any) => s.isPreloading)}
+                                                                                                onPreloadAll={voicePreloader.preloadAllVoiceSamples}
+                                                                                                disabled={!ai}
+                                                                                                lang={lang}
+                                                                                                t={t}
+                                                                                              />
                      </div>
             
             {personaSupportsRateAndPitch() && (
